@@ -1,0 +1,6 @@
+@EcoTokenSystem_HostAddress = http://localhost:5109
+
+GET {{EcoTokenSystem_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
