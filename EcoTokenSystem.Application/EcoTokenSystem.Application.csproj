@@ -13,6 +13,14 @@
   <ItemGroup>
     <Folder Include="Interfaces\" />
     <Folder Include="Services\" />
+
+    <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\EcoTokenSystem.Domain\EcoTokenSystem.Domain.csproj" />
+    <ProjectReference Include="..\EcoTokenSystem.Infrastructure\EcoTokenSystem.Infrastructure.csproj" />
+
   </ItemGroup>
 
 </Project>
