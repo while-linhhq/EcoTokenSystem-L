@@ -22,5 +22,6 @@
     <ProjectReference Include="..\EcoTokenSystem.Infrastructure\EcoTokenSystem.Infrastructure.csproj" />
 
   </ItemGroup>
+	
 
 </Project>

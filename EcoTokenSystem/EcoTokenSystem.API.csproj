@@ -1,8 +1,4 @@
-<<<<<<< Updated upstream
 <Project Sdk="Microsoft.NET.Sdk.Web">
-=======
-﻿<Project Sdk="Microsoft.NET.Sdk.Web">
->>>>>>> Stashed changes
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
@@ -12,26 +8,16 @@
 
   <ItemGroup>
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\EcoTokenSystem.Application\EcoTokenSystem.Application.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Controllers\" />
-    <Folder Include="DTOs\" />
-
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
-  </ItemGroup>
-	
-  <ItemGroup>
+    
     <ProjectReference Include="..\EcoTokenSystem.Application\EcoTokenSystem.Application.csproj" />
     <ProjectReference Include="..\EcoTokenSystem.Infrastructure\EcoTokenSystem.Infrastructure.csproj" />
-  </ItemGroup>
 
+    <Folder Include="Controllers\" />
+    <Folder Include="DTOs\" />
+  </ItemGroup>
+	
 </Project>

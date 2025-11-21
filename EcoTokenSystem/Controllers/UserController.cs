@@ -64,11 +64,6 @@ namespace EcoTokenSystem.API.Controllers
         [HttpPost("change-password")]
         public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequestDTO request )
         {
-            //if (!ModelState.IsValid)
-            //{
-            //    return BadRequest(ModelState);
-            //}
-
             try
             {
                 var response = await userService.ChangePasswordAsync(request);

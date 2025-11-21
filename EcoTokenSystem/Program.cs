@@ -1,13 +1,10 @@
 ﻿
-<<<<<<< Updated upstream
-=======
 using EcoTokenSystem.Application.Interfaces;
 using EcoTokenSystem.Application.Services;
 using EcoTokenSystem.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
->>>>>>> Stashed changes
 namespace EcoTokenSystem
 {
     public class Program
