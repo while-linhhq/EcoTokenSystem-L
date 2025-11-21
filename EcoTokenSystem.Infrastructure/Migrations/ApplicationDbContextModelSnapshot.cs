@@ -42,6 +42,29 @@ namespace EcoTokenSystem.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Items");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("e2b1a8c0-4e3d-4b7f-8c9a-6f2e0d1b4c5a"),
+                            ImageUrl = "/images/rewards/voucher50k.png",
+                            Name = "Voucher Cây Xanh 50k",
+                            RequiredPoints = 500
+                        },
+                        new
+                        {
+                            Id = new Guid("d7a5f4b3-2c1e-4a9d-9b8c-3f0a7e6d5b4c"),
+                            ImageUrl = "/images/rewards/reusablebottle.png",
+                            Name = "Bình nước Thân thiện Môi trường",
+                            RequiredPoints = 1000
+                        },
+                        new
+                        {
+                            Id = new Guid("c1e9d8a7-b6f5-4e3d-2c1b-0a9f8e7d6c5b"),
+                            ImageUrl = "/images/rewards/premium.png",
+                            Name = "1 Tháng Membership Premium",
+                            RequiredPoints = 2500
+                        });
                 });
 
             modelBuilder.Entity("EcoTokenSystem.Domain.Entities.ItemsHistory", b =>
@@ -262,6 +285,38 @@ namespace EcoTokenSystem.Infrastructure.Migrations
                     b.HasIndex("RoleId");
 
                     b.ToTable("Users");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("f3e09f3d-6a2a-47c1-80f1-622abce815ca"),
+                            Address = "TP Hồ Chí Minh",
+                            CreatedAt = new DateTime(2025, 11, 21, 6, 58, 59, 677, DateTimeKind.Utc).AddTicks(2209),
+                            CurrentPoints = 99999,
+                            DateOfBirth = new DateTime(2025, 11, 21, 6, 58, 59, 677, DateTimeKind.Utc).AddTicks(2201),
+                            Gender = "Nữ",
+                            Name = "Quản trị viên Hệ thống",
+                            PasswordHash = "$2a$11$QOh34GWE1pvJ1QzCEht4leqFoWINZcdFdZWpc9B5PPlmg.oTX3OwO",
+                            PhoneNumber = "",
+                            RoleId = 2,
+                            Streak = 99999,
+                            Username = "admin"
+                        },
+                        new
+                        {
+                            Id = new Guid("a3c72b9a-5d2e-4f8a-9a1c-4e1d8a2c9b6a"),
+                            Address = "TP Hồ Chí Minh",
+                            CreatedAt = new DateTime(2025, 11, 21, 6, 58, 59, 677, DateTimeKind.Utc).AddTicks(2265),
+                            CurrentPoints = 1500,
+                            DateOfBirth = new DateTime(2025, 11, 21, 6, 58, 59, 677, DateTimeKind.Utc).AddTicks(2264),
+                            Gender = "Nam",
+                            Name = "Người dùng thử nghiệm",
+                            PasswordHash = "$2a$11$YxK8vhj1T.F70B.HtsDBIOeFRDz4ONqiJ8uc8Rc32Xwy3Gy3wuCA6",
+                            PhoneNumber = "",
+                            RoleId = 1,
+                            Streak = 0,
+                            Username = "user_test"
+                        });
                 });
 
             modelBuilder.Entity("EcoTokenSystem.Domain.Entities.ItemsHistory", b =>

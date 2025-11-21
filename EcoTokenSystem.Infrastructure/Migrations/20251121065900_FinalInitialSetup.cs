@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace EcoTokenSystem.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class FinalConfiguration : Migration
+    public partial class FinalInitialSetup : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -180,6 +180,16 @@ namespace EcoTokenSystem.Infrastructure.Migrations
                 });
 
             migrationBuilder.InsertData(
+                table: "Items",
+                columns: new[] { "Id", "ImageUrl", "Name", "RequiredPoints" },
+                values: new object[,]
+                {
+                    { new Guid("c1e9d8a7-b6f5-4e3d-2c1b-0a9f8e7d6c5b"), "/images/rewards/premium.png", "1 Tháng Membership Premium", 2500 },
+                    { new Guid("d7a5f4b3-2c1e-4a9d-9b8c-3f0a7e6d5b4c"), "/images/rewards/reusablebottle.png", "Bình nước Thân thiện Môi trường", 1000 },
+                    { new Guid("e2b1a8c0-4e3d-4b7f-8c9a-6f2e0d1b4c5a"), "/images/rewards/voucher50k.png", "Voucher Cây Xanh 50k", 500 }
+                });
+
+            migrationBuilder.InsertData(
                 table: "PostStatuses",
                 columns: new[] { "Id", "Name" },
                 values: new object[,]
@@ -196,6 +206,15 @@ namespace EcoTokenSystem.Infrastructure.Migrations
                 {
                     { 1, "User" },
                     { 2, "Admin" }
+                });
+
+            migrationBuilder.InsertData(
+                table: "Users",
+                columns: new[] { "Id", "Address", "CreatedAt", "CurrentPoints", "DateOfBirth", "Gender", "Name", "PasswordHash", "PhoneNumber", "RoleId", "Streak", "Username" },
+                values: new object[,]
+                {
+                    { new Guid("a3c72b9a-5d2e-4f8a-9a1c-4e1d8a2c9b6a"), "TP Hồ Chí Minh", new DateTime(2025, 11, 21, 6, 58, 59, 677, DateTimeKind.Utc).AddTicks(2265), 1500, new DateTime(2025, 11, 21, 6, 58, 59, 677, DateTimeKind.Utc).AddTicks(2264), "Nam", "Người dùng thử nghiệm", "$2a$11$YxK8vhj1T.F70B.HtsDBIOeFRDz4ONqiJ8uc8Rc32Xwy3Gy3wuCA6", "", 1, 0, "user_test" },
+                    { new Guid("f3e09f3d-6a2a-47c1-80f1-622abce815ca"), "TP Hồ Chí Minh", new DateTime(2025, 11, 21, 6, 58, 59, 677, DateTimeKind.Utc).AddTicks(2209), 99999, new DateTime(2025, 11, 21, 6, 58, 59, 677, DateTimeKind.Utc).AddTicks(2201), "Nữ", "Quản trị viên Hệ thống", "$2a$11$QOh34GWE1pvJ1QzCEht4leqFoWINZcdFdZWpc9B5PPlmg.oTX3OwO", "", 2, 99999, "admin" }
                 });
 
             migrationBuilder.CreateIndex(

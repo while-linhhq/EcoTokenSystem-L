@@ -22,7 +22,7 @@ namespace EcoTokenSystem
             builder.Services.AddDbContext<ApplicationDbContext>(options =>
                 options.UseSqlServer(connectionString));
             builder.Services.AddScoped<IUserInterface, UserService>();
-
+            builder.Services.AddScoped<IPostInterface, PostService>();
             // Add services to the container.
             var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
 
@@ -45,7 +45,25 @@ namespace EcoTokenSystem
 
            
             var app = builder.Build();
+            // Thêm khối code này để tự động Migration
+            using (var scope = app.Services.CreateScope())
+            {
+                var services = scope.ServiceProvider;
+                var context = services.GetRequiredService<ApplicationDbContext>();
 
+                // Tự động áp dụng tất cả các Migration đang chờ xử lý
+                // Bỏ qua khối try-catch nếu bạn không muốn xử lý lỗi database lúc khởi động
+                try
+                {
+                    context.Database.Migrate();
+                }
+                catch (Exception ex)
+                {
+                    // Ghi lại lỗi nếu quá trình Migration thất bại
+                    var logger = services.GetRequiredService<ILogger<Program>>();
+                    logger.LogError(ex, "An error occurred while migrating the database.");
+                }
+            }
             // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
             {

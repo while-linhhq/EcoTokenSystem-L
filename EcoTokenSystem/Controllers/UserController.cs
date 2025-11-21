@@ -80,16 +80,35 @@ namespace EcoTokenSystem.API.Controllers
         [Route("{id:Guid}")]
         public async Task<IActionResult> GetProfile([FromRoute] Guid id)
         {
-           
-            return Ok();
+            try
+            {
+                var response = await userService.GetProfileAsync(id);
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex);
+            }
         }
 
         [HttpPatch]
-        public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileRequestDTO request)
+        [Route("{id:Guid}")]
+        public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileRequestDTO request, [FromRoute] Guid id)
         {
-            
-            return Ok("Thông tin cá nhân đã được cập nhật");
 
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+            try
+            {
+                var response = await userService.UpdateProfileAsync(request,id);
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex);
+            }
 
         }
     }

@@ -126,5 +126,64 @@ namespace EcoTokenSystem.Application.Services
             }
 
         }
+
+        public async Task<ResponseDTO> GetProfileAsync(Guid Id)
+        {
+            var userDomain =  await dbContext.Users.FirstOrDefaultAsync(u => u.Id == Id);
+            if(userDomain == null)
+            {
+                return new ResponseDTO(){
+                    IsSuccess = false,
+                    Message= "Lỗi khi lấy Id người dùng"
+                };
+            }
+            var data = new ResponseUserProfileDTO()
+            {
+                Username = userDomain.Username,
+                Name = userDomain.Name,
+                DateOfBirth = userDomain.DateOfBirth,
+                Gender = userDomain.Gender,
+                PhoneNumber = userDomain.PhoneNumber,
+                Address = userDomain.Address,
+                CreatedAt = userDomain.CreatedAt,
+                CurrentPoints = userDomain.CurrentPoints,
+                Streak = userDomain.Streak
+            };
+            return new ResponseDTO()
+            {
+                IsSuccess = true,
+                Message = "Lấy profile thành công",
+                Data = data
+            };
+
+        }
+
+        public async Task<ResponseDTO> UpdateProfileAsync(UpdateProfileRequestDTO request , Guid Id)
+        {
+            var userDomain = await dbContext.Users.FirstOrDefaultAsync(u=> u.Id.Equals(Id));
+            if(userDomain == null)
+            {
+                return new ResponseDTO()
+                {
+                    IsSuccess = false,
+                    Message = "Lỗi khi lấy Id người dùng"
+                };
+            }
+            
+            userDomain.Name = request.Name;
+            userDomain.PhoneNumber = request.PhoneNumber;   
+            userDomain.Address = request.Address;
+            userDomain.DateOfBirth = request.DateOfBirth.Value.ToDateTime(TimeOnly.MinValue);
+            userDomain.Gender = request.Gender;
+
+             dbContext.Update(userDomain);
+            await dbContext.SaveChangesAsync();
+            return new ResponseDTO()
+            {
+                IsSuccess = true,
+                Message = "Cập nhật thông tin thành công"
+            };
+
+        }
     }
 }
