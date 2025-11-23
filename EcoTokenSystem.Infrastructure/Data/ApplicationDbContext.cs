@@ -12,10 +12,12 @@ namespace EcoTokenSystem.Infrastructure.Data
         private readonly Guid SampleUserId = Guid.Parse("A3C72B9A-5D2E-4F8A-9A1C-4E1D8A2C9B6A");
 
         // Khai báo GUIDs cố định cho Items
-        private readonly Guid Item1Id = Guid.Parse("E2B1A8C0-4E3D-4B7F-8C9A-6F2E0D1B4C5A"); // Voucher Cây Xanh
+        private readonly Guid Item1Id = Guid.Parse("E2B1A8C0-4E3D-4B7F-8C9A-6F2E0D1B4C5A"); // Túi vải
         private readonly Guid Item2Id = Guid.Parse("D7A5F4B3-2C1E-4A9D-9B8C-3F0A7E6D5B4C"); // Bình nước
         private readonly Guid Item3Id = Guid.Parse("C1E9D8A7-B6F5-4E3D-2C1B-0A9F8E7D6C5B"); // Ống hút
-
+        private readonly Guid Item4Id = Guid.Parse("EBB8E449-506C-4F12-9BAC-15A63EDD502F"); //Set quà tặng bằng tre
+        private readonly Guid Item5Id = Guid.Parse("ED322A69-55B6-47C6-909D-2CE26AAF5A11"); //Hộp bút thân thiện với môi trường
+        private readonly Guid Item6Id = Guid.Parse("046564C4-882E-49C7-BD74-EB38D41EF521"); //Giá đỡ máy tính bảng bằng tre
         // Khai báo GUIDs cố định cho Post mẫu
         private readonly Guid Post1Id = Guid.Parse("1A2B3C4D-5E6F-7A8B-9C0D-1E2F3A4B5C6D"); // Approved Post
         private readonly Guid Post2Id = Guid.Parse("F5E4D3C2-B1A0-9876-5432-10FEDCBA9876"); // Pending Post
@@ -134,9 +136,12 @@ namespace EcoTokenSystem.Infrastructure.Data
 
             // Seed Items
             modelBuilder.Entity<Items>().HasData(
-                new Items { Id = Item1Id, Name = "Voucher Cây Xanh 50k", ImageUrl = "/images/rewards/voucher50k.png", RequiredPoints = 500 },
-                new Items { Id = Item2Id, Name = "Bình nước Thân thiện Môi trường", ImageUrl = "/images/rewards/reusablebottle.png", RequiredPoints = 1000 },
-                new Items { Id = Item3Id, Name = "Ống hút Inox/Tre", ImageUrl = "/images/rewards/bamboo_straws.png", RequiredPoints = 400 }
+                new Items { Id = Item1Id, Name = "Túi xách vải ", ImageUrl = "/imagesItem/4cf97def-f0ef-4a06-899d-dbffa4e2f02f.jpg", RequiredPoints = 500 },
+                new Items { Id = Item2Id, Name = "Bình nước Thân thiện Môi trường", ImageUrl = "/imagesItem/af1c1380-7edc-40cf-afd1-95b6f8b6d91e.jpg", RequiredPoints = 1000 },
+                new Items { Id = Item3Id, Name = "Ống hút Tre", ImageUrl = "/imagesItem/6144411c-172b-45d0-abcb-ae714ea825a5.jpg", RequiredPoints = 400 },
+                new Items { Id = Item4Id, Name = "Set quà tặng bằng tre ", ImageUrl = "/imagesItem/75e0829b-fb8f-47f1-9977-d0d377aaca9d.jpg", RequiredPoints = 150 },
+                new Items { Id = Item5Id, Name = "Hộp bút thân thiện với môi trường", ImageUrl = "/imagesItem/8e5f5ba6-8d81-4333-842d-292399c4a44c.jpg", RequiredPoints = 200 },
+                new Items { Id = Item6Id, Name = "Giá đỡ máy tính bảng bằng tre", ImageUrl = "/imagesItem/76b61892-6589-4fd1-af0c-9f02311683c9.jpg", RequiredPoints = 100 }
             );
 
             // --- 4. SEED DỮ LIỆU GIAO DỊCH ẢO (FULL SEED) ---

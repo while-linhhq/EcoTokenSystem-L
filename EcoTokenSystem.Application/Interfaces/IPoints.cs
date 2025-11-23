@@ -7,9 +7,8 @@ using System.Threading.Tasks;
 
 namespace EcoTokenSystem.Application.Interfaces
 {
-    public interface IPointsAndItems
+    public interface IPoints
     {
-        Task<ResponseDTO<List<ItemsDTO>>> ItemsAsync();
-        Task<ResponseDTO<List<PointHistoryDTO>>> ItemsHistoryAsync(Guid ?userId);
+        Task<ResponseDTO<List<PointHistoryDTO>>> PointsHistoryAsync(Guid? userId);
     }
 }

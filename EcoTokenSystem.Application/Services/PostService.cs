@@ -124,5 +124,48 @@ namespace EcoTokenSystem.Application.Services
                 Message = request.StatusId == 2 ?"Duyệt bài thành công" : "Từ chối bài viết thành công"
             };
         }
+
+        public async Task<ResponseDTO<List<PostsDTO>>> GetPostsAsync(Guid userId, int? statusId)
+        {
+            
+            var postsQuery =  _context.Posts.Where(post => post.UserId.Equals(userId)).AsQueryable();
+            if (statusId.HasValue)
+            {
+                postsQuery = postsQuery.Where(post => post.StatusId.Equals(statusId.Value));
+             }
+
+            var postsDomain = await postsQuery.ToListAsync();
+
+            if (postsDomain == null || !postsDomain.Any())
+            {
+                return new ResponseDTO<List<PostsDTO>>
+                {
+                    IsSuccess = false,
+                    Message = "Người dùng không có bài đăng nào phù hợp với trạng thái",
+                    Data = new List<PostsDTO>()
+                };
+            }
+
+            var postsDtoList = postsDomain.Select(post => new PostsDTO
+            {
+                Title = post.Title,
+                Content = post.Content,
+                ImageUrl = post.ImageUrl,
+                UserId = userId,
+                StatusId = post.StatusId,
+                AdminId = new Guid("F3E09F3D-6A2A-47C1-80F1-622ABCE815CA"),
+                AwardedPoints = post.AwardedPoints,
+                SubmittedAt = post.SubmittedAt,
+                ApprovedRejectedAt = post.ApprovedRejectedAt,
+                RejectionReason  = post.RejectionReason
+            }).ToList();
+
+            return new ResponseDTO<List<PostsDTO>>
+            {
+                IsSuccess = true,
+                Message = "Lấy danh sách bài đăng thành công.",
+                Data = postsDtoList
+            };
+        }
     }
 }

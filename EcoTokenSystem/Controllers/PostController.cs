@@ -1,4 +1,5 @@
-﻿using EcoTokenSystem.Application.DTOs;
+﻿using Azure.Core;
+using EcoTokenSystem.Application.DTOs;
 using EcoTokenSystem.Application.Interfaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -45,6 +46,22 @@ namespace EcoTokenSystem.API.Controllers
                 return Ok(response);
             }
             catch (Exception ex) { 
+                return BadRequest(ex);
+            }
+        }
+
+        [HttpGet]
+        [Route("{userId:Guid}/{statusId:int}")]
+        public async Task<IActionResult> GetPost([FromRoute]Guid userId, [FromRoute] int? statusId)
+        {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+            try
+            {
+                var response = await _postService.GetPostsAsync(userId, statusId);
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
                 return BadRequest(ex);
             }
         }

@@ -11,5 +11,7 @@ namespace EcoTokenSystem.Application.Interfaces
     {
         Task<ResponseDTO> CreatePostAsync(Guid userId, PostCreateRequestDTO request);
         Task<ResponseDTO> ApproveRejectPost(Guid id ,ApproveAndRejectPostDTO request);
+
+        Task<ResponseDTO<List<PostsDTO>>> GetPostsAsync(Guid userId, int? statusId);
     }
 }
