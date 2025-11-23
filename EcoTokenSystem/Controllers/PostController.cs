@@ -24,7 +24,6 @@ namespace EcoTokenSystem.API.Controllers
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
 
-            //Guid userId = new Guid("F3E09F3D-6A2A-47C1-80F1-622ABCE815CA");  
 
             var response = await _postService.CreatePostAsync(id, request);
 
@@ -49,5 +48,7 @@ namespace EcoTokenSystem.API.Controllers
                 return BadRequest(ex);
             }
         }
+
+        
     }
 }

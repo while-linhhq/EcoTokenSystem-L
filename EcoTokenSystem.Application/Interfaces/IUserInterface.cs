@@ -13,8 +13,10 @@ namespace EcoTokenSystem.Application.Interfaces
         public Task<LoginResponseDTO> LoginAsync(LoginRequestDTO request);
         public Task<ResponseDTO> ChangePasswordAsync(ChangePasswordRequestDTO request);
 
-        public Task<ResponseDTO> GetProfileAsync(Guid Id);
+        public Task<ResponseDTO<ResponseUserProfileDTO>> GetProfileAsync(Guid Id);
 
         public Task<ResponseDTO> UpdateProfileAsync(UpdateProfileRequestDTO request, Guid Id);
+
+        public Task<ResponseDTO<List<PostsDTO>>> UserPostsAsync(Guid userId,int? statusId);
     }
 }

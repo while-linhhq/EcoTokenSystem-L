@@ -111,5 +111,18 @@ namespace EcoTokenSystem.API.Controllers
             }
 
         }
+        [HttpGet("posts/{userId:Guid}")]
+        public async Task<IActionResult> Posts([FromRoute] Guid userId, [FromQuery] int? statusId)
+        {
+            try
+            {
+                var response = await userService.UserPostsAsync(userId, statusId);
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex);
+            }
+        }
     }
 }

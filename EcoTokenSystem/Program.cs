@@ -23,6 +23,8 @@ namespace EcoTokenSystem
                 options.UseSqlServer(connectionString));
             builder.Services.AddScoped<IUserInterface, UserService>();
             builder.Services.AddScoped<IPostInterface, PostService>();
+            builder.Services.AddScoped<IPointsAndItems, PointsAndItemsServices>();
+
             // Add services to the container.
             var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
 

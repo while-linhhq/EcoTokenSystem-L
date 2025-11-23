@@ -127,14 +127,15 @@ namespace EcoTokenSystem.Application.Services
 
         }
 
-        public async Task<ResponseDTO> GetProfileAsync(Guid Id)
+        public async Task<ResponseDTO<ResponseUserProfileDTO>> GetProfileAsync(Guid Id)
         {
             var userDomain =  await dbContext.Users.FirstOrDefaultAsync(u => u.Id == Id);
             if(userDomain == null)
             {
-                return new ResponseDTO(){
+                return new ResponseDTO<ResponseUserProfileDTO>(){
                     IsSuccess = false,
-                    Message= "Lỗi khi lấy Id người dùng"
+                    Message= "Lỗi khi lấy Id người dùng",
+                    Data = new ResponseUserProfileDTO()
                 };
             }
             var data = new ResponseUserProfileDTO()
@@ -149,7 +150,7 @@ namespace EcoTokenSystem.Application.Services
                 CurrentPoints = userDomain.CurrentPoints,
                 Streak = userDomain.Streak
             };
-            return new ResponseDTO()
+            return new ResponseDTO<ResponseUserProfileDTO>()
             {
                 IsSuccess = true,
                 Message = "Lấy profile thành công",
@@ -185,5 +186,53 @@ namespace EcoTokenSystem.Application.Services
             };
 
         }
+
+        public async Task<ResponseDTO<List<PostsDTO>>> UserPostsAsync(Guid userId, int? statusId)
+        {
+            var userDomain = await dbContext.Users.FirstOrDefaultAsync(u=> u.Id.Equals(userId));
+            if (userDomain == null)
+            {
+                return new ResponseDTO<List<PostsDTO>>()
+                {
+                    IsSuccess = false,
+                    Message = "Lỗi khi lấy Id người dùng",
+                    Data = new List<PostsDTO>()
+                };
+            }
+            var postQuery = dbContext.Posts.
+                    Where(p=> p.UserId.Equals(userId)).
+                    AsQueryable();
+            if (statusId.HasValue)
+            {
+                postQuery = postQuery.Where(p => p.StatusId.Equals(statusId));
+            }
+
+            var postsDomain =await postQuery.ToListAsync();
+            List<PostsDTO> posts = new List<PostsDTO>();
+            foreach (var post in postsDomain) 
+            {
+                posts.Add(new PostsDTO()
+                {
+                    Title = post.Title,
+                    Content = post.Content,
+                    ImageUrl = post.ImageUrl,
+                    UserId = post.UserId,
+                    StatusId = post.StatusId,
+                    AdminId = post.AdminId,
+                    AwardedPoints = post.AwardedPoints,
+                    SubmittedAt = post.SubmittedAt,
+                    ApprovedRejectedAt = post.ApprovedRejectedAt,
+                    RejectionReason = post.RejectionReason
+                });
+            }
+            return new ResponseDTO<List<PostsDTO>>()
+            {
+                IsSuccess = true,
+                Message = "Lấy danh sách các bài đăng của cá nhân",
+                Data = posts.ToList()
+            };
+
+        }
+
     }
 }
