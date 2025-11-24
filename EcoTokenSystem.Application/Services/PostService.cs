@@ -74,55 +74,84 @@ namespace EcoTokenSystem.Application.Services
             return new ResponseDTO { IsSuccess = true, Message = "Bài đăng đã được gửi chờ duyệt." };
         }
 
-        public async Task<ResponseDTO> ApproveRejectPost(Guid id  ,ApproveAndRejectPostDTO request)
+        public async Task<ResponseDTO> ApproveRejectPost(Guid id, ApproveAndRejectPostDTO request)
         {
-            var postDomain = await  _context.Posts.FindAsync(id);
+            Guid adminId = new Guid("F3E09F3D-6A2A-47C1-80F1-622ABCE815CA");
+            var postDomain = await _context.Posts.FindAsync(id);
             if (postDomain == null)
             {
-                return new ResponseDTO
-                {
-                    IsSuccess = false,
-                    Message = "Lỗi khi lấy id bài đăng"
-                };
+                return new ResponseDTO { IsSuccess = false, Message = "Lỗi khi lấy id bài đăng" };
             }
 
-            
-            if (request.StatusId == 2)//approve
+            var authorDomain = await _context.Users.FirstOrDefaultAsync(u => u.Id == postDomain.UserId);
+            if (authorDomain == null)
+            {
+                return new ResponseDTO { IsSuccess = false, Message = "Không tìm thấy tác giả bài viết." };
+            }
+
+            postDomain.StatusId = request.StatusId;
+            postDomain.ApprovedRejectedAt = DateTime.UtcNow;
+            postDomain.AdminId = adminId;
+            if (request.StatusId == 2)
             {
                 postDomain.AwardedPoints = request.awardedPoints;
-                var authorDomain = await _context.Users.FirstOrDefaultAsync(u => u.Id == postDomain.UserId);
-                if (authorDomain != null)
+
+                authorDomain.CurrentPoints += request.awardedPoints;
+                _context.Users.Update(authorDomain); 
+
+                var pointHistory = new PointHistory
                 {
-                    authorDomain.CurrentPoints += request.awardedPoints;
-                    _context.Users.Update(authorDomain);
-                    await _context.SaveChangesAsync();
-                    var pointHistory = new PointHistory
-                    {
-                        Id = Guid.NewGuid(),
-                        UserId = authorDomain.Id,
-                        AdminId = new Guid("F3E09F3D-6A2A-47C1-80F1-622ABCE815CA"),
-                        PostId = postDomain.Id,
-                        PointsChange = request.awardedPoints,
-                        TransactionDate = DateTime.UtcNow
-                    };
-                    await _context.PointHistories.AddAsync(pointHistory);
-                }
+                    Id = Guid.NewGuid(),
+                    UserId = authorDomain.Id,
+                    AdminId = adminId,
+                    PostId = postDomain.Id,
+                    PointsChange = request.awardedPoints,
+                    TransactionDate = DateTime.UtcNow
+                };
+                await _context.PointHistories.AddAsync(pointHistory);  
+
+                // B. XỬ LÝ LOGIC STREAK
+                await UpdateUserStreakAsync(authorDomain, postDomain.SubmittedAt);
             }
-            else if (request.StatusId == 3)
+            else if (request.StatusId == 3)  
             {
                 postDomain.RejectionReason = request.RejectReason;
             }
-            postDomain.StatusId = request.StatusId;
-            postDomain.AdminId = new Guid("F3E09F3D-6A2A-47C1-80F1-622ABCE815CA");
-            postDomain.ApprovedRejectedAt = DateTime.UtcNow;
+
             _context.Posts.Update(postDomain);
-            await _context.SaveChangesAsync();
+            await _context.SaveChangesAsync ();  
 
             return new ResponseDTO()
             {
                 IsSuccess = true,
-                Message = request.StatusId == 2 ?"Duyệt bài thành công" : "Từ chối bài viết thành công"
+                Message = request.StatusId == 2 ? "Duyệt bài thành công" : "Từ chối bài viết thành công"
             };
+        }
+
+        private async Task UpdateUserStreakAsync(User userDomain, DateTime currentPostSubmissionDate)
+        {
+            var lastApprovedPostDate = await _context.Posts
+                .Where(p => p.UserId == userDomain.Id && p.StatusId == 2) // StatusId 2 = Approved
+                .OrderByDescending(p => p.ApprovedRejectedAt)
+                .Select(p => p.ApprovedRejectedAt)
+                .FirstOrDefaultAsync();
+
+            var currentApprovedDate = DateTime.UtcNow.Date;
+
+            if (lastApprovedPostDate == null || lastApprovedPostDate.Value.Date < currentApprovedDate.AddDays(-1).Date)
+            {
+                // 1. Trường hợp lần đầu được duyệt HOẶC đã bỏ lỡ 1 ngày trở lên (Bắt đầu streak mới)
+                userDomain.Streak = 1;
+            }
+            else if (lastApprovedPostDate.Value.Date == currentApprovedDate.AddDays(-1).Date)
+            {
+                // 2. Trường hợp duyệt liên tiếp (Hôm nay được duyệt, bài cũ được duyệt ngày hôm qua)
+                userDomain.Streak += 1;
+            }
+            // Trường hợp còn lại: ApprovedDate == PreviousDate (Duyệt nhiều bài trong 1 ngày) -> Streak giữ nguyên
+
+            // Lưu User Entity đã được Update
+            _context.Users.Update(userDomain);
         }
 
         public async Task<ResponseDTO<List<PostsDTO>>> GetPostsAsync(Guid userId, int? statusId)
