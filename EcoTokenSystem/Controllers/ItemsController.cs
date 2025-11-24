@@ -2,6 +2,7 @@
 using EcoTokenSystem.Application.Interfaces;
 using EcoTokenSystem.Application.Services;
 using EcoTokenSystem.Domain.Entities;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -49,6 +50,7 @@ namespace EcoTokenSystem.API.Controllers
 
         [HttpPost]
         //[Consumes("multipart/form-data")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> AddItem([FromForm] AddItemRequestDTO request)
         {
             if (!ModelState.IsValid)
@@ -67,6 +69,7 @@ namespace EcoTokenSystem.API.Controllers
         }
         [HttpDelete]
         [Route("{itemId:Guid}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteItem([FromRoute] Guid itemId)
         {
             
@@ -84,6 +87,7 @@ namespace EcoTokenSystem.API.Controllers
 
         [HttpPatch]
         [Route("{itemId:Guid}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> UpdateItem([FromRoute] Guid itemId,[FromForm] UpdateItemRequestDTO request)
         {
             if (!ModelState.IsValid)

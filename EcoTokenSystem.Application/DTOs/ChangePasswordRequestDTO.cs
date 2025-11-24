@@ -4,7 +4,7 @@ namespace EcoTokenSystem.Application.DTOs
 {
     public class ChangePasswordRequestDTO
     {
-        public Guid UserId { get; set; }
+        //public Guid UserId { get; set; }
         [Required]
         public string OldPassword { get; set; }
         [Required]

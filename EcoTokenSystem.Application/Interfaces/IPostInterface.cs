@@ -10,8 +10,7 @@ namespace EcoTokenSystem.Application.Interfaces
     public interface IPostInterface
     {
         Task<ResponseDTO> CreatePostAsync(Guid userId, PostCreateRequestDTO request);
-        Task<ResponseDTO> ApproveRejectPost(Guid id ,ApproveAndRejectPostDTO request);
-
+        Task<ResponseDTO> ApproveRejectPostAsync(Guid id, ApproveAndRejectPostDTO request, Guid adminId);
         Task<ResponseDTO<List<PostsDTO>>> GetPostsAsync(Guid userId, int? statusId);
     }
 }

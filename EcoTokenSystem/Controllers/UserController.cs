@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
+using System.Security.Claims;
 
 namespace EcoTokenSystem.API.Controllers
 {
@@ -62,38 +63,50 @@ namespace EcoTokenSystem.API.Controllers
         }
 
         [HttpPost("change-password")]
+        [Authorize]
         public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequestDTO request )
         {
             try
             {
-                var response = await userService.ChangePasswordAsync(request);
+                Guid userId = GetUserIdFromToken();
+                var response = await userService.ChangePasswordAsync(request, userId);
                 return Ok(response);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                // Xử lý lỗi nếu Token không chứa User ID (dù [Authorize] đã chặn)
+                return Unauthorized(ex.Message);
             }
             catch (Exception ex)
             {
-                return BadRequest(ex);
+                // Xử lý lỗi Server chung
+                return StatusCode(500, new ResponseDTO { IsSuccess = false, Message = "Lỗi Server: " + ex.Message });
             }
 
         }
 
-        [HttpGet]
-        [Route("{id:Guid}")]
-        public async Task<IActionResult> GetProfile([FromRoute] Guid id)
+        [HttpGet("me")]
+        public async Task<IActionResult> GetProfile()
         {
             try
             {
-                var response = await userService.GetProfileAsync(id);
-                return Ok(response);
+                Guid userId = GetUserIdFromToken();
+                var response = await userService.GetProfileAsync(userId);
+                if (response.IsSuccess) return Ok(response.Data);  
+                else return NotFound(response);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(ex.Message);
             }
             catch (Exception ex)
             {
-                return BadRequest(ex);
+                return StatusCode(500, new ResponseDTO { IsSuccess = false, Message = "Lỗi Server: " + ex.Message });
             }
         }
 
-        [HttpPatch]
-        [Route("{id:Guid}")]
-        public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileRequestDTO request, [FromRoute] Guid id)
+        [HttpPatch("me")]
+        public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileRequestDTO request)
         {
 
             if (!ModelState.IsValid)
@@ -102,27 +115,56 @@ namespace EcoTokenSystem.API.Controllers
             }
             try
             {
-                var response = await userService.UpdateProfileAsync(request,id);
-                return Ok(response);
+                Guid userId = GetUserIdFromToken();
+                var response = await userService.UpdateProfileAsync(request, userId);
+                if (response.IsSuccess) return Ok(response);
+                else return BadRequest(response);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(ex.Message);
             }
             catch (Exception ex)
             {
-                return BadRequest(ex);
+                return StatusCode(500, new ResponseDTO { IsSuccess = false, Message = "Lỗi Server: " + ex.Message });
             }
 
         }
-        [HttpGet("posts/{userId:Guid}")]
-        public async Task<IActionResult> Posts([FromRoute] Guid userId, [FromQuery] int? statusId)
+
+        [HttpGet("me/posts")]
+        [Authorize]  
+        public async Task<IActionResult> GetMyPosts([FromQuery] int? statusId)
         {
             try
             {
+                Guid userId = GetUserIdFromToken();
                 var response = await userService.UserPostsAsync(userId, statusId);
-                return Ok(response);
+
+                if (response.IsSuccess) return Ok(response.Data);
+                else return NotFound(response);
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Unauthorized("Token không hợp lệ hoặc thiếu User ID.");
             }
             catch (Exception ex)
             {
-                return BadRequest(ex);
+                return StatusCode(500, new ResponseDTO { IsSuccess = false, Message = "Lỗi Server: " + ex.Message });
             }
+        }
+
+        protected Guid GetUserIdFromToken()
+        {
+            // User là property của ControllerBase, chứa Claims từ Token đã xác thực
+            var userIdClaim = User.FindFirstValue(System.Security.Claims.ClaimTypes.NameIdentifier);
+            // Trong TokenService, bạn đã gán UserId vào ClaimTypes.NameIdentifier (hoặc JwtRegisteredClaimNames.Sub)
+
+            if (Guid.TryParse(userIdClaim, out Guid userId))
+            {
+                return userId;
+            }
+            // Ném Exception hoặc xử lý lỗi nếu không tìm thấy ID (không nên xảy ra nếu đã [Authorize])
+            throw new UnauthorizedAccessException("Không tìm thấy User ID trong Token.");
         }
     }
 }

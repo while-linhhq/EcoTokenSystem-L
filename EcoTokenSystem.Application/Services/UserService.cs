@@ -14,20 +14,21 @@ namespace EcoTokenSystem.Application.Services
     public class UserService : IUserInterface
     {
         private readonly ApplicationDbContext dbContext;
-
-        public UserService(ApplicationDbContext dbContext )
+        private readonly ITokenService _tokenService;
+        public UserService(ApplicationDbContext dbContext , ITokenService tokenService)
         {
             this.dbContext = dbContext;
+            _tokenService = tokenService;
         }
 
         
 
-        public async Task<LoginResponseDTO> RegisterAsync(RegisterRequestDTO request)
+        public async Task<ResponseDTO> RegisterAsync(RegisterRequestDTO request)
         {
             var existedUser = await dbContext.Users.FirstOrDefaultAsync(u => u.Username.Equals(request.Username));
             if(existedUser != null)
             {
-                return new LoginResponseDTO
+                return new ResponseDTO
                 {
                     IsSuccess = false,
                     Message = "Tên đăng nhập đã tồn tại!"
@@ -48,88 +49,86 @@ namespace EcoTokenSystem.Application.Services
             await dbContext.Users.AddAsync(userDomain);
             await dbContext.SaveChangesAsync();
 
-            var response = new LoginResponseDTO()
+            var response = new ResponseDTO()
             {
                 IsSuccess = true,
-                Message = "Đăng ký thành công",
-                UserId = userDomain.Id,
-                Username = request.Username,
-                RoleId = userDomain.RoleId
+                Message = "Đăng ký thành công"
             };
             return response;
         }
 
-        public  async Task<LoginResponseDTO> LoginAsync(LoginRequestDTO request)
-        {
-            var userDomain = await dbContext.Users
-                .Include(u => u.Role) 
-                .FirstOrDefaultAsync(u => u.Username.Equals(request.Username)); if (userDomain == null)
+        public async Task<ResponseDTO<LoginResponseDTO>> LoginAsync(LoginRequestDTO request)
+        {   
+            var user = await dbContext.Users
+                .Include(u => u.Role) // Dùng Include nếu bạn muốn lấy luôn RoleName
+                .FirstOrDefaultAsync(u => u.Username == request.Username);
+
+            // Kiểm tra User hoặc Mật khẩu
+            if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
             {
-                return new LoginResponseDTO() { IsSuccess = false, Message="Tên đăng nhập hoặc mật khẩu không đúng!" };
-            }
-
-            bool isPasswordValid = BCrypt.Net.BCrypt.Verify(request.Password, userDomain.PasswordHash);
-
-            if (isPasswordValid)
-            {
-
-                return new LoginResponseDTO()
+                return new ResponseDTO<LoginResponseDTO>
                 {
-                    IsSuccess = true,
-                    Message = "Đăng nhập thành công!",
-                    UserId = userDomain.Id,
-                    RoleId = userDomain.RoleId,
-                    Username = userDomain.Username
+                    IsSuccess = false,
+                    Message = "Tên đăng nhập hoặc mật khẩu không chính xác.",
+                    Data = new LoginResponseDTO() { }
                 };
             }
-            return new LoginResponseDTO() { IsSuccess = false, Message = "Mật khẩu không đúng!" };
 
+            // 3. Kiểm tra RoleName và tạo Token
+            var roleName = user.Role?.Name ?? "User"; // Lấy tên Role từ navigation property (hoặc gán cứng "User" nếu Role bị null)
+
+            // Tạo JWT
+            var token = _tokenService.GenerateToken(user, roleName);
+
+            // 4. Trả về Response thành công cùng với Token và thông tin cơ bản
+            return new ResponseDTO<LoginResponseDTO>
+            {
+                IsSuccess = true,
+                Message = "Đăng nhập thành công!",
+                Data = new LoginResponseDTO()
+                {
+                    UserId = user.Id,
+                    Username = user.Username,
+                    RoleName = roleName,
+                    CurrentPoints = user.CurrentPoints,
+                    Token = token
+                }
+            };
         }
 
-        public async Task<ResponseDTO> ChangePasswordAsync(ChangePasswordRequestDTO request)
+        public async Task<ResponseDTO> ChangePasswordAsync(ChangePasswordRequestDTO request, Guid userId)
         {
-            var userDomain = await dbContext.Users.FirstOrDefaultAsync(u => u.Id.Equals(request.UserId));
-            if (userDomain == null) {
-                return new ResponseDTO()
-                {
-                    IsSuccess = false,
-                    Message = "Lỗi truy cập người dùng(Id)"
-                };
+            // Dùng userId lấy từ Token để tìm User
+            var userDomain = await dbContext.Users.FirstOrDefaultAsync(u => u.Id.Equals(userId));
+
+            // Lỗi này hiếm xảy ra nếu đã có [Authorize]
+            if (userDomain == null)
+            {
+                return new ResponseDTO() { IsSuccess = false, Message = "Lỗi xác thực người dùng." };
             }
+
             if (!request.NewPassword.Equals(request.NewPasswordConfirm))
             {
-                return new ResponseDTO()
-                {
-                    IsSuccess = false,
-                    Message = "Vui lòng kiểm tra lại mật khẩu mới/mật khẩu nhập lại "
-                };
+                return new ResponseDTO() { IsSuccess = false, Message = "Mật khẩu mới không khớp." };
             }
+
             if (BCrypt.Net.BCrypt.Verify(request.OldPassword, userDomain.PasswordHash))
             {
                 userDomain.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
-                    dbContext.Users.Update(userDomain);
+                dbContext.Users.Update(userDomain);
                 await dbContext.SaveChangesAsync();
 
-                return new ResponseDTO()
-                {
-                    IsSuccess = true,
-                    Message = "Cập nhật mật khẩu thành công"
-                };
+                return new ResponseDTO() { IsSuccess = true, Message = "Cập nhật mật khẩu thành công." };
             }
-            else 
+            else
             {
-                return new ResponseDTO()
-                {
-                    IsSuccess = false,
-                    Message = "Mật khẩu cũ không chính xác."
-                };
+                return new ResponseDTO() { IsSuccess = false, Message = "Mật khẩu cũ không chính xác." };
             }
-
         }
 
         public async Task<ResponseDTO<ResponseUserProfileDTO>> GetProfileAsync(Guid Id)
         {
-            var userDomain =  await dbContext.Users.FirstOrDefaultAsync(u => u.Id == Id);
+            var userDomain =  await dbContext.Users.Include(u => u.Role).FirstOrDefaultAsync(u => u.Id == Id);
             if(userDomain == null)
             {
                 return new ResponseDTO<ResponseUserProfileDTO>(){
@@ -146,6 +145,7 @@ namespace EcoTokenSystem.Application.Services
                 Gender = userDomain.Gender,
                 PhoneNumber = userDomain.PhoneNumber,
                 Address = userDomain.Address,
+                RoleName = userDomain.Role?.Name ?? "User",
                 CreatedAt = userDomain.CreatedAt,
                 CurrentPoints = userDomain.CurrentPoints,
                 Streak = userDomain.Streak
@@ -170,11 +170,14 @@ namespace EcoTokenSystem.Application.Services
                     Message = "Lỗi khi lấy Id người dùng"
                 };
             }
-            
+            if (request.DateOfBirth.HasValue)
+            {
+                userDomain.DateOfBirth = request.DateOfBirth.Value.ToDateTime(TimeOnly.MinValue);
+            }
+
             userDomain.Name = request.Name;
             userDomain.PhoneNumber = request.PhoneNumber;   
             userDomain.Address = request.Address;
-            userDomain.DateOfBirth = request.DateOfBirth.Value.ToDateTime(TimeOnly.MinValue);
             userDomain.Gender = request.Gender;
 
              dbContext.Update(userDomain);

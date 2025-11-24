@@ -1,0 +1,143 @@
+.layout {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.navbar {
+  background: linear-gradient(135deg, #2d5016 0%, #4a7c2a 100%);
+  color: white;
+  padding: 15px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+.nav-brand {
+  font-size: 1.5em;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.nav-brand a {
+  color: white;
+  text-decoration: none;
+  transition: opacity 0.3s;
+}
+
+.nav-brand a:hover {
+  opacity: 0.8;
+}
+
+.moderator-badge {
+  font-size: 0.6em;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-weight: 600;
+}
+
+.nav-links {
+  display: flex;
+  gap: 20px;
+  flex: 1;
+  justify-content: center;
+}
+
+.nav-links a {
+  color: white;
+  text-decoration: none;
+  padding: 8px 15px;
+  border-radius: 8px;
+  transition: background 0.3s;
+  font-weight: 500;
+}
+
+.nav-links a:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.nav-links a.active {
+  background: rgba(255, 255, 255, 0.2);
+  font-weight: 600;
+}
+
+.nav-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.user-avatar-small {
+  font-size: 1.5em;
+}
+
+.user-avatar-small-image {
+  width: 35px;
+  height: 35px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.user-name-small {
+  font-weight: 500;
+  font-size: 0.95em;
+}
+
+.logout-btn-small {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85em;
+  transition: background 0.3s;
+}
+
+.logout-btn-small:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.main-content {
+  flex: 1;
+  background: linear-gradient(135deg, #f0f7f0 0%, #e8f5e9 100%);
+  min-height: calc(100vh - 70px);
+}
+
+@media (max-width: 768px) {
+  .navbar {
+    flex-direction: column;
+    gap: 15px;
+    padding: 15px;
+  }
+
+  .nav-links {
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+  }
+
+  .nav-links a {
+    font-size: 0.9em;
+    padding: 6px 12px;
+  }
+
+  .nav-user {
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .logout-btn-small {
+    width: 100%;
+  }
+}
+

@@ -9,9 +9,9 @@ namespace EcoTokenSystem.Application.Interfaces
 {
     public interface IUserInterface
     {
-        public Task<LoginResponseDTO> RegisterAsync(RegisterRequestDTO request);
-        public Task<LoginResponseDTO> LoginAsync(LoginRequestDTO request);
-        public Task<ResponseDTO> ChangePasswordAsync(ChangePasswordRequestDTO request);
+        public Task<ResponseDTO> RegisterAsync(RegisterRequestDTO request);
+        public Task<ResponseDTO<LoginResponseDTO>> LoginAsync(LoginRequestDTO request);
+        public Task<ResponseDTO> ChangePasswordAsync(ChangePasswordRequestDTO request, Guid userId);
 
         public Task<ResponseDTO<ResponseUserProfileDTO>> GetProfileAsync(Guid Id);
 

@@ -1,0 +1,253 @@
+.social-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.social-header {
+  text-align: center;
+  margin-bottom: 30px;
+  color: #2d5016;
+}
+
+.social-header h1 {
+  font-size: 2.5em;
+  margin: 0 0 10px 0;
+}
+
+.social-header p {
+  font-size: 1.1em;
+  color: #666;
+  margin: 0;
+}
+
+.social-tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 25px;
+  border-bottom: 2px solid #e0e0e0;
+  justify-content: center;
+}
+
+.social-tabs button {
+  padding: 12px 25px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 1em;
+  color: #666;
+  border-bottom: 3px solid transparent;
+  transition: all 0.3s;
+  font-weight: 600;
+}
+
+.social-tabs button.active {
+  color: #4a7c2a;
+  border-bottom-color: #4a7c2a;
+}
+
+.stories-section {
+  margin-bottom: 30px;
+}
+
+.stories-container {
+  display: flex;
+  gap: 15px;
+  overflow-x: auto;
+  padding: 10px 0;
+  scrollbar-width: thin;
+}
+
+.story-item {
+  flex-shrink: 0;
+  text-align: center;
+  cursor: pointer;
+  transition: transform 0.3s;
+}
+
+.story-item:hover {
+  transform: scale(1.05);
+}
+
+.story-avatar {
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #4a7c2a 0%, #6ba644 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2em;
+  margin: 0 auto 8px;
+  border: 3px solid white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.story-avatar-image {
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin: 0 auto 8px;
+  border: 3px solid white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.story-content {
+  width: 120px;
+  height: 200px;
+  background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+  border-radius: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3em;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.story-name {
+  margin-top: 8px;
+  font-size: 0.85em;
+  color: #333;
+  font-weight: 600;
+}
+
+.feed-section {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.post-card {
+  background: white;
+  border-radius: 15px;
+  padding: 20px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.post-header {
+  margin-bottom: 15px;
+}
+
+.post-user {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.user-avatar {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #4a7c2a 0%, #6ba644 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.8em;
+  flex-shrink: 0;
+}
+
+.user-avatar-image {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #4a7c2a;
+  flex-shrink: 0;
+}
+
+.user-info {
+  flex: 1;
+}
+
+.user-name {
+  font-weight: 600;
+  color: #333;
+  font-size: 1.1em;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.verified-badge {
+  color: #4a7c2a;
+  font-size: 1.2em;
+}
+
+.user-level {
+  color: #666;
+  font-size: 0.85em;
+  margin-top: 2px;
+}
+
+.post-image {
+  width: 100%;
+  aspect-ratio: 1;
+  background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 5em;
+  margin-bottom: 15px;
+}
+
+.post-content {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.post-description {
+  color: #333;
+  font-size: 1em;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.post-actions {
+  display: flex;
+  gap: 15px;
+  padding-top: 15px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.action-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 15px;
+  border: none;
+  background: #f5f5f5;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 0.95em;
+  color: #333;
+  transition: all 0.3s;
+  font-weight: 600;
+}
+
+.action-btn:hover {
+  background: #e0e0e0;
+}
+
+.action-btn.like-btn.liked {
+  background: #ffe0e0;
+  color: #e74c3c;
+}
+
+@media (max-width: 768px) {
+  .stories-container {
+    gap: 10px;
+  }
+
+  .story-content {
+    width: 100px;
+    height: 160px;
+  }
+
+  .post-image {
+    font-size: 4em;
+  }
+}
+

@@ -15,6 +15,7 @@ namespace EcoTokenSystem.Application.DTOs
         public string PhoneNumber { get; set; } = string.Empty;
         public string Address { get; set; } = string.Empty;
 
+        public string RoleName { get; set; } = string.Empty;
         public int CurrentPoints { get; set; } = 0;
         public int Streak { get; set; } = 0;
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
