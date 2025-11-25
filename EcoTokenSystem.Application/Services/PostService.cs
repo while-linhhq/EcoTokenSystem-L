@@ -211,7 +211,7 @@ namespace EcoTokenSystem.Application.Services
         public async Task<ResponseDTO<List<PostsDTO>>> GetPostsAsync(Guid userId, int? statusId)
         {
             var postsQuery = _context.Posts.Where(post => post.UserId.Equals(userId)).AsQueryable();
-
+            //var postsQuery = _context.Posts.AsQueryable();
             if (statusId.HasValue)
             {
                 postsQuery = postsQuery.Where(post => post.StatusId.Equals(statusId.Value));

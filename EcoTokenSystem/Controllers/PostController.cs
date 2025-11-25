@@ -77,13 +77,14 @@ namespace EcoTokenSystem.API.Controllers
         // --- 3. API XEM CÔNG KHAI (Posts) ---
         // BỔ SUNG: Cho phép xem tất cả bài đã duyệt (StatusId = 2)
         [HttpGet]
-        public async Task<IActionResult> GetApprovedPosts()
+        public async Task<IActionResult> GetApprovedPosts(int statusId)
         {
             try
             {
                 // Dùng Guid.Empty hoặc logic khác nếu muốn lấy PUBLIC POSTS
                 // Nếu Service cho phép lọc theo StatusId = 2 (Approved)
-                var response = await _postService.GetPostsAsync(Guid.Empty, 2);
+                Guid userId = GetUserIdFromToken();
+                var response = await _postService.GetPostsAsync(userId, statusId);
 
                 if (response.IsSuccess) return Ok(response.Data);
                 return NotFound(response);

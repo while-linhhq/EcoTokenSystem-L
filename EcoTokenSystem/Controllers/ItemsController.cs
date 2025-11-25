@@ -10,7 +10,7 @@ namespace EcoTokenSystem.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class ItemsController : ControllerBase
+    public class ItemsController : BaseController
     {
         private readonly IItemsInterface pointsAndItemsService;
 
@@ -34,11 +34,13 @@ namespace EcoTokenSystem.API.Controllers
         }
 
         [HttpPost]
-        [Route("{userId:Guid}/{itemId:Guid}")]
-        public async Task<IActionResult> ChangeItems([FromRoute]Guid userId, [FromRoute] Guid itemId)
+        [Route("{itemId:Guid}")]
+        [Authorize(Roles = "User,Admin")]
+        public async Task<IActionResult> ChangeItems( [FromRoute] Guid itemId)
         {
             try
             {
+                Guid userId = GetUserIdFromToken();
                 var response = await pointsAndItemsService.ChangeItemsAsync(userId,itemId);
                 return Ok(response);
             }

@@ -1,4 +1,5 @@
 ﻿using EcoTokenSystem.Application.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -6,7 +7,7 @@ namespace EcoTokenSystem.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class PointsController : ControllerBase
+    public class PointsController : BaseController
     {
         private readonly IPoints pointsService;
 
@@ -16,10 +17,12 @@ namespace EcoTokenSystem.API.Controllers
         }
 
         [HttpGet("point-history")]
-        public async Task<IActionResult> PointHistory([FromQuery] Guid? userId)
+        [Authorize]
+        public async Task<IActionResult> PointHistory()
         {
             try
             {
+                Guid userId = GetUserIdFromToken();
                 var response = await pointsService.PointsHistoryAsync(userId);
                 return Ok(response);
             }

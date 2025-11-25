@@ -56,6 +56,7 @@ namespace EcoTokenSystem.Application.Services
 
         public async Task<ResponseDTO> ChangeItemsAsync(Guid userId, Guid itemId)
         {
+
             var userDomain = await dbContext.Users.FindAsync(userId);
             if(userDomain == null) 
             {
