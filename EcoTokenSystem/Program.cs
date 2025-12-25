@@ -95,7 +95,6 @@ namespace EcoTokenSystem
 
                         // Khóa bí mật dùng để xác minh chữ ký của Token
                         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret!))
-                        //ClockSkew = TimeSpan.Zero // Không cho phép độ lệch thời gian
                     };
                 });
 
@@ -110,15 +109,12 @@ namespace EcoTokenSystem
                 var services = scope.ServiceProvider;
                 var context = services.GetRequiredService<ApplicationDbContext>();
 
-                // Tự động áp dụng tất cả các Migration đang chờ xử lý
-                // Bỏ qua khối try-catch nếu bạn không muốn xử lý lỗi database lúc khởi động
                 try
                 {
                     context.Database.Migrate();
                 }
                 catch (Exception ex)
                 {
-                    // Ghi lại lỗi nếu quá trình Migration thất bại
                     var logger = services.GetRequiredService<ILogger<Program>>();
                     logger.LogError(ex, "An error occurred while migrating the database.");
                 }
@@ -127,7 +123,11 @@ namespace EcoTokenSystem
             if (app.Environment.IsDevelopment())
             {
                 app.UseSwagger();
-                app.UseSwaggerUI();
+                app.UseSwaggerUI(c =>
+                {
+                    c.SwaggerEndpoint("/swagger/v1/swagger.json", "EcoTokenSystem API V1");
+                    c.RoutePrefix = string.Empty; // Để trống giúp vào thẳng Swagger khi truy cập http://localhost:5000
+                });
             }
 
             app.UseHttpsRedirection();
