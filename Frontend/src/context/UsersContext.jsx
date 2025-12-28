@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-import { getAllUsersApi, createModeratorApi, updateUserApi as updateUserApiCall, searchUsersApi } from '../api/usersApi';
+import { useAuth } from './AuthContext';
+import { getAllUsersApi, createModeratorApi, updateUserApi as updateUserApiCall, deleteUserApi, searchUsersApi } from '../api/usersApi';
 
 const UsersContext = createContext();
 
@@ -14,9 +15,16 @@ export const useUsers = () => {
 export const UsersProvider = ({ children }) => {
   const [allUsers, setAllUsers] = useState([]);
   const [loading, setLoading] = useState(false);
+  const { isAuthenticated, user, isAdmin } = useAuth();
 
-  // Load all users from API
+  // Load all users from API (chỉ admin mới có quyền)
   const loadAllUsers = async () => {
+    // Chỉ load nếu user đã đăng nhập và là admin
+    if (!isAuthenticated || !user || !isAdmin()) {
+      console.log('[UsersContext] User not authenticated or not admin, skipping loadAllUsers');
+      return;
+    }
+
     try {
       setLoading(true);
       const response = await getAllUsersApi();
@@ -31,8 +39,13 @@ export const UsersProvider = ({ children }) => {
   };
 
   useEffect(() => {
-    loadAllUsers();
-  }, []);
+    // Chỉ load khi user đã đăng nhập và là admin
+    if (isAuthenticated && user && isAdmin()) {
+      loadAllUsers();
+    } else {
+      setAllUsers([]);
+    }
+  }, [isAuthenticated, user]);
 
   const saveUser = (userData) => {
     // This is a sync function for backward compatibility
@@ -70,22 +83,36 @@ export const UsersProvider = ({ children }) => {
     }
   };
 
+  const deleteUser = async (userId) => {
+    try {
+      const response = await deleteUserApi(userId);
+      if (response.success) {
+        // Xóa user khỏi state
+        setAllUsers(prev => prev.filter(user => user.id !== userId));
+        return { success: true, message: response.message };
+      }
+      return { success: false, message: response.message };
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
+  };
+
   const searchUsers = async (searchTerm) => {
     try {
-      const response = await searchUsersApi(searchTerm);
-      if (response.success) {
-        return response.data;
-      }
-      return [];
+      const users = await searchUsersApi(searchTerm);
+      // searchUsersApi trả về array trực tiếp
+      return Array.isArray(users) ? users : [];
     } catch (error) {
+      console.error('Error searching users:', error);
       // Fallback to local search
       if (!searchTerm) return allUsers;
       const term = searchTerm.toLowerCase();
       return allUsers.filter(user =>
+        user.username?.toLowerCase().includes(term) ||
+        user.name?.toLowerCase().includes(term) ||
         user.nickname?.toLowerCase().includes(term) ||
-        user.email?.toLowerCase().includes(term) ||
         user.phone?.includes(term) ||
-        user.fullName?.toLowerCase().includes(term)
+        user.phoneNumber?.includes(term)
       );
     }
   };
@@ -99,6 +126,7 @@ export const UsersProvider = ({ children }) => {
         saveUser,
         createModerator,
         updateUser,
+        deleteUser,
         searchUsers
       }}
     >

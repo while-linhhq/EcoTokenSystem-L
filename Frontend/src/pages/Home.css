@@ -84,6 +84,61 @@
   overflow: hidden;
 }
 
+.mascot-pattern-overlay {
+  opacity: 0.6;
+}
+
+@keyframes patternMove {
+  0% {
+    transform: translateX(0) translateY(0);
+  }
+  100% {
+    transform: translateX(20px) translateY(20px);
+  }
+}
+
+@keyframes mascotPattern {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes mascotPulse {
+  0%, 100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 15px var(--mascot-color, #4a7c2a)) drop-shadow(0 0 25px var(--mascot-color, #4a7c2a));
+  }
+  50% {
+    transform: scale(1.05);
+    filter: drop-shadow(0 0 20px var(--mascot-color, #4a7c2a)) drop-shadow(0 0 35px var(--mascot-color, #4a7c2a)) drop-shadow(0 0 45px var(--mascot-color, #4a7c2a));
+  }
+}
+
+@keyframes mascotGlow {
+  0%, 100% {
+    transform: scale(1) rotate(0deg);
+    filter: drop-shadow(0 0 20px var(--mascot-color, #FFD700)) drop-shadow(0 0 30px var(--mascot-color, #FFD700));
+  }
+  25% {
+    transform: scale(1.08) rotate(-2deg);
+    filter: drop-shadow(0 0 25px var(--mascot-color, #FFD700)) drop-shadow(0 0 40px var(--mascot-color, #FFD700));
+  }
+  50% {
+    transform: scale(1.1) rotate(0deg);
+    filter: drop-shadow(0 0 30px var(--mascot-color, #FFD700)) drop-shadow(0 0 50px var(--mascot-color, #FFD700));
+  }
+  75% {
+    transform: scale(1.08) rotate(2deg);
+    filter: drop-shadow(0 0 25px var(--mascot-color, #FFD700)) drop-shadow(0 0 40px var(--mascot-color, #FFD700));
+  }
+}
+
 .mascot-section.golden-mascot {
   background: linear-gradient(135deg, #FFD700 0%, #FFA500 50%, #FFD700 100%);
   background-size: 200% 200%;
@@ -132,6 +187,7 @@
   transition: transform 0.3s;
   animation: bounce 2s infinite;
   position: relative;
+  line-height: 1;
 }
 
 .mascot.golden {

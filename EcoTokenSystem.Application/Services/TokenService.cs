@@ -29,8 +29,11 @@ namespace EcoTokenSystem.Application.Services
             // 1. Tạo Claims (Thông tin định danh người dùng)
             var claims = new List<Claim>
             {
-                // ID người dùng (Cần thiết để truy vấn User sau này)
-                new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()), 
+                // ID người dùng - Dùng cả Sub (JWT standard) và NameIdentifier (ASP.NET standard)
+                // JwtRegisteredClaimNames.Sub = "sub" (JWT standard claim)
+                new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
+                // ClaimTypes.NameIdentifier = ASP.NET standard (để BaseController.GetUserIdFromToken() hoạt động)
+                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
                 // Username (Định danh tên)
                 new Claim(JwtRegisteredClaimNames.Jti, user.Username), 
                 // Vai trò (Rất quan trọng cho [Authorize(Roles = "Admin")])

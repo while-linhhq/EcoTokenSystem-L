@@ -38,6 +38,9 @@ namespace EcoTokenSystem.Infrastructure.Data
         public DbSet<PointHistory> PointHistories { get; set; }
         public DbSet<Items> Items { get; set; }
         public DbSet<ItemsHistory> ItemsHistory { get; set; }
+        public DbSet<Config> Configs { get; set; }
+        public DbSet<Like> Likes { get; set; }
+        public DbSet<Comment> Comments { get; set; }
 
         private static string HashPassword(string password)
         {
@@ -98,6 +101,37 @@ namespace EcoTokenSystem.Infrastructure.Data
                 .HasForeignKey(ih => ih.ItemId)
                 .OnDelete(DeleteBehavior.Restrict);
 
+            // Like relationships
+            modelBuilder.Entity<Like>()
+                .HasOne(l => l.Post)
+                .WithMany(p => p.Likes)
+                .HasForeignKey(l => l.PostId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<Like>()
+                .HasOne(l => l.User)
+                .WithMany(u => u.Likes)
+                .HasForeignKey(l => l.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Unique constraint: User can only like a post once
+            modelBuilder.Entity<Like>()
+                .HasIndex(l => new { l.PostId, l.UserId })
+                .IsUnique();
+
+            // Comment relationships
+            modelBuilder.Entity<Comment>()
+                .HasOne(c => c.Post)
+                .WithMany(p => p.Comments)
+                .HasForeignKey(c => c.PostId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<Comment>()
+                .HasOne(c => c.User)
+                .WithMany(u => u.Comments)
+                .HasForeignKey(c => c.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
             // --- 2. SEED DATA CỐ ĐỊNH (Role, Status) ---
 
             modelBuilder.Entity<PostStatus>().HasData(
@@ -107,7 +141,8 @@ namespace EcoTokenSystem.Infrastructure.Data
             );
             modelBuilder.Entity<Role>().HasData(
                 new Role { Id = 1, Name = "User" },
-                new Role { Id = 2, Name = "Admin" }
+                new Role { Id = 2, Name = "Admin" },
+                new Role { Id = 3, Name = "Moderator" }
             );
 
             // --- 3. SEED USERS & ITEMS ---
@@ -136,12 +171,12 @@ namespace EcoTokenSystem.Infrastructure.Data
 
             // Seed Items
             modelBuilder.Entity<Items>().HasData(
-                new Items { Id = Item1Id, Name = "Túi xách vải ", ImageUrl = "/imagesItem/4cf97def-f0ef-4a06-899d-dbffa4e2f02f.jpg", RequiredPoints = 500 },
-                new Items { Id = Item2Id, Name = "Bình nước Thân thiện Môi trường", ImageUrl = "/imagesItem/af1c1380-7edc-40cf-afd1-95b6f8b6d91e.jpg", RequiredPoints = 1000 },
-                new Items { Id = Item3Id, Name = "Ống hút Tre", ImageUrl = "/imagesItem/6144411c-172b-45d0-abcb-ae714ea825a5.jpg", RequiredPoints = 400 },
-                new Items { Id = Item4Id, Name = "Set quà tặng bằng tre ", ImageUrl = "/imagesItem/75e0829b-fb8f-47f1-9977-d0d377aaca9d.jpg", RequiredPoints = 150 },
-                new Items { Id = Item5Id, Name = "Hộp bút thân thiện với môi trường", ImageUrl = "/imagesItem/8e5f5ba6-8d81-4333-842d-292399c4a44c.jpg", RequiredPoints = 200 },
-                new Items { Id = Item6Id, Name = "Giá đỡ máy tính bảng bằng tre", ImageUrl = "/imagesItem/76b61892-6589-4fd1-af0c-9f02311683c9.jpg", RequiredPoints = 100 }
+                new Items { Id = Item1Id, Name = "Túi xách vải ", ImageUrl = "/imagesItem/4cf97def-f0ef-4a06-899d-dbffa4e2f02f.jpg", RequiredPoints = 500, Tag = "handmade" },
+                new Items { Id = Item2Id, Name = "Bình nước Thân thiện Môi trường", ImageUrl = "/imagesItem/af1c1380-7edc-40cf-afd1-95b6f8b6d91e.jpg", RequiredPoints = 1000, Tag = "handmade" },
+                new Items { Id = Item3Id, Name = "Ống hút Tre", ImageUrl = "/imagesItem/6144411c-172b-45d0-abcb-ae714ea825a5.jpg", RequiredPoints = 400, Tag = "handmade" },
+                new Items { Id = Item4Id, Name = "Set quà tặng bằng tre ", ImageUrl = "/imagesItem/75e0829b-fb8f-47f1-9977-d0d377aaca9d.jpg", RequiredPoints = 150, Tag = "handmade" },
+                new Items { Id = Item5Id, Name = "Hộp bút thân thiện với môi trường", ImageUrl = "/imagesItem/8e5f5ba6-8d81-4333-842d-292399c4a44c.jpg", RequiredPoints = 200, Tag = "handmade" },
+                new Items { Id = Item6Id, Name = "Giá đỡ máy tính bảng bằng tre", ImageUrl = "/imagesItem/76b61892-6589-4fd1-af0c-9f02311683c9.jpg", RequiredPoints = 100, Tag = "handmade" }
             );
 
             // --- 4. SEED DỮ LIỆU GIAO DỊCH ẢO (FULL SEED) ---
@@ -204,6 +239,35 @@ namespace EcoTokenSystem.Infrastructure.Data
                     UserId = SampleUserId,
                     ItemId = Item3Id, // Đổi Ống hút (400 điểm)
                     RedemptionDate = DateTime.UtcNow.AddDays(-3)
+                }
+            );
+
+            // --- 5. SEED CONFIG DATA (Cấu hình giá, streak milestones, action rewards) ---
+            var defaultGiftPrices = "{}"; // Empty object, sẽ được cập nhật qua Admin UI
+            var defaultStreakMilestones = "{\"50\":{\"color\":\"#4A90E2\",\"emoji\":\"🐢\",\"name\":\"Linh vật xanh dương\"},\"100\":{\"color\":\"#FFD700\",\"emoji\":\"🌟\",\"name\":\"Linh vật vàng\"}}";
+            var defaultActionRewards = "{\"default\":{\"streak\":1,\"ecoTokens\":10},\"tags\":{\"xe-dap\":{\"streak\":1,\"ecoTokens\":15},\"mang-coc\":{\"streak\":1,\"ecoTokens\":12},\"trong-cay\":{\"streak\":1,\"ecoTokens\":20},\"phan-loai-rac\":{\"streak\":1,\"ecoTokens\":12},\"binh-nuoc\":{\"streak\":1,\"ecoTokens\":10},\"tui-vai\":{\"streak\":1,\"ecoTokens\":10}}}";
+
+            modelBuilder.Entity<Config>().HasData(
+                new Config
+                {
+                    Id = Guid.Parse("11111111-1111-1111-1111-111111111111"),
+                    Key = "GiftPrices",
+                    Value = defaultGiftPrices,
+                    UpdatedAt = DateTime.UtcNow
+                },
+                new Config
+                {
+                    Id = Guid.Parse("22222222-2222-2222-2222-222222222222"),
+                    Key = "StreakMilestones",
+                    Value = defaultStreakMilestones,
+                    UpdatedAt = DateTime.UtcNow
+                },
+                new Config
+                {
+                    Id = Guid.Parse("33333333-3333-3333-3333-333333333333"),
+                    Key = "ActionRewards",
+                    Value = defaultActionRewards,
+                    UpdatedAt = DateTime.UtcNow
                 }
             );
         }

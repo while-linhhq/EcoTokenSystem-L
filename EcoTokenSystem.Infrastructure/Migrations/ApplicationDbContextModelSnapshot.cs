@@ -39,6 +39,11 @@ namespace EcoTokenSystem.Infrastructure.Migrations
                     b.Property<int>("RequiredPoints")
                         .HasColumnType("int");
 
+                    b.Property<string>("Tag")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasDefaultValue("handmade");
+
                     b.HasKey("Id");
 
                     b.ToTable("Items");
@@ -49,42 +54,48 @@ namespace EcoTokenSystem.Infrastructure.Migrations
                             Id = new Guid("e2b1a8c0-4e3d-4b7f-8c9a-6f2e0d1b4c5a"),
                             ImageUrl = "/imagesItem/4cf97def-f0ef-4a06-899d-dbffa4e2f02f.jpg",
                             Name = "Túi xách vải ",
-                            RequiredPoints = 500
+                            RequiredPoints = 500,
+                            Tag = "handmade"
                         },
                         new
                         {
                             Id = new Guid("d7a5f4b3-2c1e-4a9d-9b8c-3f0a7e6d5b4c"),
                             ImageUrl = "/imagesItem/af1c1380-7edc-40cf-afd1-95b6f8b6d91e.jpg",
                             Name = "Bình nước Thân thiện Môi trường",
-                            RequiredPoints = 1000
+                            RequiredPoints = 1000,
+                            Tag = "handmade"
                         },
                         new
                         {
                             Id = new Guid("c1e9d8a7-b6f5-4e3d-2c1b-0a9f8e7d6c5b"),
                             ImageUrl = "/imagesItem/6144411c-172b-45d0-abcb-ae714ea825a5.jpg",
                             Name = "Ống hút Tre",
-                            RequiredPoints = 400
+                            RequiredPoints = 400,
+                            Tag = "handmade"
                         },
                         new
                         {
                             Id = new Guid("ebb8e449-506c-4f12-9bac-15a63edd502f"),
                             ImageUrl = "/imagesItem/75e0829b-fb8f-47f1-9977-d0d377aaca9d.jpg",
                             Name = "Set quà tặng bằng tre ",
-                            RequiredPoints = 150
+                            RequiredPoints = 150,
+                            Tag = "handmade"
                         },
                         new
                         {
                             Id = new Guid("ed322a69-55b6-47c6-909d-2ce26aaf5a11"),
                             ImageUrl = "/imagesItem/8e5f5ba6-8d81-4333-842d-292399c4a44c.jpg",
                             Name = "Hộp bút thân thiện với môi trường",
-                            RequiredPoints = 200
+                            RequiredPoints = 200,
+                            Tag = "handmade"
                         },
                         new
                         {
                             Id = new Guid("046564c4-882e-49c7-bd74-eb38d41ef521"),
                             ImageUrl = "/imagesItem/76b61892-6589-4fd1-af0c-9f02311683c9.jpg",
                             Name = "Giá đỡ máy tính bảng bằng tre",
-                            RequiredPoints = 100
+                            RequiredPoints = 100,
+                            Tag = "handmade"
                         });
                 });
 
@@ -307,6 +318,11 @@ namespace EcoTokenSystem.Infrastructure.Migrations
                         {
                             Id = 2,
                             Name = "Admin"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Name = "Moderator"
                         });
                 });
 
@@ -498,6 +514,51 @@ namespace EcoTokenSystem.Infrastructure.Migrations
                     b.Navigation("PostsApproved");
 
                     b.Navigation("TransactionsMade");
+                });
+
+            modelBuilder.Entity("EcoTokenSystem.Domain.Entities.Config", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Key")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Value")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Configs");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("11111111-1111-1111-1111-111111111111"),
+                            Key = "GiftPrices",
+                            UpdatedAt = new DateTime(2025, 11, 21, 6, 58, 59, 677, DateTimeKind.Utc),
+                            Value = "{}"
+                        },
+                        new
+                        {
+                            Id = new Guid("22222222-2222-2222-2222-222222222222"),
+                            Key = "StreakMilestones",
+                            UpdatedAt = new DateTime(2025, 11, 21, 6, 58, 59, 677, DateTimeKind.Utc),
+                            Value = "{\"50\":{\"color\":\"#4A90E2\",\"emoji\":\"🐢\",\"name\":\"Linh vật xanh dương\"},\"100\":{\"color\":\"#FFD700\",\"emoji\":\"🌟\",\"name\":\"Linh vật vàng\"}}"
+                        },
+                        new
+                        {
+                            Id = new Guid("33333333-3333-3333-3333-333333333333"),
+                            Key = "ActionRewards",
+                            UpdatedAt = new DateTime(2025, 11, 21, 6, 58, 59, 677, DateTimeKind.Utc),
+                            Value = "{\"default\":{\"streak\":1,\"ecoTokens\":10},\"tags\":{\"xe-dap\":{\"streak\":1,\"ecoTokens\":15},\"mang-coc\":{\"streak\":1,\"ecoTokens\":12},\"trong-cay\":{\"streak\":1,\"ecoTokens\":20},\"phan-loai-rac\":{\"streak\":1,\"ecoTokens\":12},\"binh-nuoc\":{\"streak\":1,\"ecoTokens\":10},\"tui-vai\":{\"streak\":1,\"ecoTokens\":10}}}"
+                        });
                 });
 #pragma warning restore 612, 618
         }

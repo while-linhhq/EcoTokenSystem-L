@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { getCurrentUserApi } from '../api/authApi';
 import './Profile.css';
 
 const Profile = () => {
@@ -25,14 +26,33 @@ const Profile = () => {
   const [passwordError, setPasswordError] = useState('');
   const [passwordSuccess, setPasswordSuccess] = useState('');
 
+  // Refresh user data khi vào trang để đồng bộ tokens và streak với database
+  useEffect(() => {
+    const refreshUserData = async () => {
+      try {
+        const response = await getCurrentUserApi();
+        if (response.success && response.data) {
+          await updateUser(response.data);
+        }
+      } catch (error) {
+        console.error('Error refreshing user data:', error);
+        // Không hiển thị lỗi cho user, chỉ log
+      }
+    };
+    
+    if (user?.id) {
+      refreshUserData();
+    }
+  }, [user?.id, updateUser]);
+
   useEffect(() => {
     if (user) {
-      setNickname(user.nickname || '');
+      setNickname(user.nickname || user.name || '');
       setFullName(user.fullName || '');
       setEmail(user.email || '');
-      setPhone(user.phone || '');
+      setPhone(user.phone || user.phoneNumber || '');
       setDateOfBirth(user.dateOfBirth || '');
-      setGender(user.gender || '');
+      setGender(user.gender || 'Khác'); // Default value nếu không có
       setAddress(user.address || '');
       setNotifications(user.notifications ?? true);
       setAvatar(user.avatar || '🌱');
@@ -76,11 +96,24 @@ const Profile = () => {
   const avatars = ['🌱', '🌿', '🍃', '🌳', '🌲', '🌴', '🦋', '🐢', '🦎', '🌍'];
 
   const handleSave = async () => {
+    // Validate required fields trước khi gửi
+    if (!nickname || nickname.trim() === '') {
+      alert('Vui lòng nhập nickname (tên hiển thị)');
+      return;
+    }
+
+    if (!gender || gender.trim() === '') {
+      alert('Vui lòng chọn giới tính');
+      return;
+    }
+
     const updatedData = {
+      name: nickname || user.nickname || user.name, // Backend yêu cầu 'name' field
       nickname: nickname || user.nickname,
       fullName: fullName || user.fullName,
       email: email || user.email,
       phone: phone || user.phone,
+      phoneNumber: phone || user.phone, // Backend yêu cầu 'phoneNumber' field
       dateOfBirth: dateOfBirth || user.dateOfBirth,
       gender: gender || user.gender,
       address: address || user.address,
@@ -243,6 +276,7 @@ const Profile = () => {
               value={nickname}
               onChange={(e) => setNickname(e.target.value)}
               placeholder="Nhập nickname của bạn"
+              required
             />
           </div>
 
@@ -269,16 +303,17 @@ const Profile = () => {
           </div>
 
           <div className="form-group">
-            <label>Giới tính</label>
+            <label>Giới tính *</label>
             <select
               value={gender}
               onChange={(e) => setGender(e.target.value)}
               className="form-select"
+              required
             >
               <option value="">-- Chọn giới tính --</option>
-              <option value="male">Nam</option>
-              <option value="female">Nữ</option>
-              <option value="other">Khác</option>
+              <option value="Nam">Nam</option>
+              <option value="Nữ">Nữ</option>
+              <option value="Khác">Khác</option>
             </select>
           </div>
 

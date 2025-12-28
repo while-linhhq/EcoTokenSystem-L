@@ -2,12 +2,13 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useConfig } from '../context/ConfigContext';
 import { useUsers } from '../context/UsersContext';
+import { getAllItemsApi, addItemApi, updateItemApi, deleteItemApi } from '../api/itemsAdminApi';
 import './Admin.css';
 
 const Admin = () => {
   const { user } = useAuth();
-  const { config, updateGiftPrice, updateStreakMilestone, updateActionReward, updateDefaultActionReward } = useConfig();
-  const { createModerator, updateUser, searchUsers, loadAllUsers } = useUsers();
+  const { config, updateStreakMilestone, updateActionReward, updateDefaultActionReward, deleteStreakMilestone, deleteActionReward } = useConfig();
+  const { createModerator, updateUser, deleteUser, loadAllUsers, allUsers } = useUsers();
   const [activeTab, setActiveTab] = useState('moderators');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedUser, setSelectedUser] = useState(null);
@@ -16,32 +17,120 @@ const Admin = () => {
   const [modEmail, setModEmail] = useState('');
   const [modPassword, setModPassword] = useState('');
   const [modNickname, setModNickname] = useState('');
+  const [modRole, setModRole] = useState('moderator'); // 'user' hoặc 'moderator'
 
-  // Gift price form
-  const [giftId, setGiftId] = useState('');
-  const [giftPrice, setGiftPrice] = useState('');
+  // Items management
+  const [items, setItems] = useState([]);
+  const [selectedItem, setSelectedItem] = useState(null);
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [showItemModal, setShowItemModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState(null);
+  const [itemForm, setItemForm] = useState({
+    name: '',
+    requiredPoints: '',
+    tag: 'handmade',
+    imageFile: null
+  });
 
-  // Streak milestone form
-  const [streakValue, setStreakValue] = useState('');
-  const [milestoneColor, setMilestoneColor] = useState('#FFD700');
-  const [milestoneEmoji, setMilestoneEmoji] = useState('🌟');
-  const [milestoneName, setMilestoneName] = useState('');
+  const categories = ['all', 'handmade', 'vouchers', 'books', 'movies', 'donations'];
 
-  // Action reward form
-  const [actionTag, setActionTag] = useState('');
-  const [actionStreak, setActionStreak] = useState('1');
-  const [actionTokens, setActionTokens] = useState('10');
+  // Rewards sub-tab
+  const [rewardsSubTab, setRewardsSubTab] = useState('streaks'); // 'streaks' or 'actions'
+
+  // Streak milestone modal
+  const [showStreakModal, setShowStreakModal] = useState(false);
+  const [showDeleteStreakModal, setShowDeleteStreakModal] = useState(false);
+  const [streakToDelete, setStreakToDelete] = useState(null);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [streakForm, setStreakForm] = useState({
+    streak: '',
+    color: '#FFD700',
+    emoji: '🌟',
+    name: ''
+  });
+
+  // Danh sách emoji linh vật để admin chọn
+  const mascotEmojis = [
+    '🌱', '🌿', '🍃', '🌳', '🌲', '🌴', '🌵', '🌾',
+    '🦋', '🐢', '🦎', '🐸', '🐍', '🦜', '🦅', '🦉',
+    '🐼', '🐨', '🦁', '🐯', '🐻', '🐰', '🦊', '🐺',
+    '🐬', '🐳', '🦈', '🐙', '🦑', '🦀', '🦐', '🐠',
+    '🌟', '⭐', '✨', '💫', '🌙', '☀️', '🌈', '🔥',
+    '💚', '💙', '💛', '🧡', '❤️', '💜', '🤍', '🖤',
+    '🌍', '🌎', '🌏', '🗺️', '🏔️', '⛰️', '🌊', '🏞️'
+  ];
+
+  // Action reward modal
+  const [showActionModal, setShowActionModal] = useState(false);
+  const [showDeleteActionModal, setShowDeleteActionModal] = useState(false);
+  const [actionToDelete, setActionToDelete] = useState(null);
+  const [isEditingDefault, setIsEditingDefault] = useState(false);
+  const [actionForm, setActionForm] = useState({
+    tag: '',
+    streak: '1',
+    ecoTokens: '10'
+  });
 
   const [filteredUsers, setFilteredUsers] = useState([]);
 
-  // Load filtered users
+  // Load items
   useEffect(() => {
-    const loadFilteredUsers = async () => {
-      const users = await searchUsers(searchTerm);
-      setFilteredUsers(Array.isArray(users) ? users : []);
+    const loadItems = async () => {
+      // Load items khi vào tab items
+      if (activeTab === 'items') {
+        try {
+          console.log('[Admin] Loading items...');
+          const response = await getAllItemsApi();
+          console.log('[Admin] Items response:', {
+            success: response.success,
+            dataLength: response.data?.length || 0,
+            data: response.data
+          });
+          
+          if (response.success) {
+            setItems(response.data || []);
+            console.log('[Admin] Items loaded:', response.data?.length || 0);
+          } else {
+            console.error('[Admin] Failed to load items:', response.message);
+            setItems([]);
+          }
+        } catch (error) {
+          console.error('[Admin] Error loading items:', error);
+          setItems([]);
+        }
+      }
     };
-    loadFilteredUsers();
-  }, [searchTerm, searchUsers]);
+    loadItems();
+  }, [activeTab]);
+
+  // Load users when entering users tab
+  useEffect(() => {
+    if (activeTab === 'users') {
+      loadAllUsers();
+    }
+  }, [activeTab, loadAllUsers]);
+
+  // Filter users based on search term (using allUsers from context)
+  useEffect(() => {
+    if (activeTab === 'users') {
+      if (!searchTerm) {
+        // No search term, show all users
+        setFilteredUsers(allUsers || []);
+      } else {
+        // Filter users based on search term
+        const term = searchTerm.toLowerCase();
+        const filtered = (allUsers || []).filter(user =>
+          user.username?.toLowerCase().includes(term) ||
+          user.name?.toLowerCase().includes(term) ||
+          user.nickname?.toLowerCase().includes(term) ||
+          user.phone?.toLowerCase().includes(term) ||
+          user.phoneNumber?.toLowerCase().includes(term)
+        );
+        setFilteredUsers(filtered);
+      }
+    }
+  }, [searchTerm, allUsers, activeTab]);
 
   const handleCreateModerator = async (e) => {
     e.preventDefault();
@@ -49,94 +138,56 @@ const Admin = () => {
       alert('Vui lòng điền đầy đủ thông tin');
       return;
     }
-    const result = await createModerator({
-      email: modEmail,
-      password: modPassword,
-      nickname: modNickname,
-      avatar: '👮',
-      notifications: true
-    });
-    if (result.success) {
-      alert(result.message || `Đã tạo tài khoản moderator: ${result.data.nickname}`);
-      setModEmail('');
-      setModPassword('');
-      setModNickname('');
-      await loadAllUsers();
-    } else {
-      alert(result.message || 'Có lỗi xảy ra khi tạo moderator');
-    }
-  };
-
-  const handleUpdateGiftPrice = async (e) => {
-    e.preventDefault();
-    if (!giftId || !giftPrice) {
-      alert('Vui lòng điền đầy đủ thông tin');
+    
+    // Validate password length
+    if (modPassword.length < 8) {
+      alert('Mật khẩu phải có ít nhất 8 ký tự');
       return;
     }
-    const result = await updateGiftPrice(parseInt(giftId), parseInt(giftPrice));
-    if (result.success) {
-      alert(result.message || `Đã cập nhật giá quà ID ${giftId} thành ${giftPrice} Eco Tokens`);
-      setGiftId('');
-      setGiftPrice('');
-    } else {
-      alert(result.message || 'Có lỗi xảy ra khi cập nhật giá quà');
+    
+    try {
+      // Backend chỉ cần username và password
+      // Username có thể là email hoặc nickname
+      console.log('[Admin] Creating user:', { username: modEmail, role: modRole, roleId: modRole === 'moderator' ? 3 : 1 });
+      
+      const result = await createModerator({
+        username: modEmail, // Dùng email làm username
+        password: modPassword,
+        nickname: modNickname,
+        role: modRole, // 'user' hoặc 'moderator'
+        roleId: modRole === 'moderator' ? 3 : 1
+      });
+      
+      console.log('[Admin] Create result:', result);
+      
+      if (result && result.success) {
+        alert(result.message || `Đã tạo tài khoản thành công: ${modNickname}`);
+        setModEmail('');
+        setModPassword('');
+        setModNickname('');
+        await loadAllUsers();
+      } else {
+        // Hiển thị error message chi tiết
+        const errorMsg = result?.message || 'Có lỗi xảy ra khi tạo tài khoản';
+        console.error('[Admin] Create failed:', {
+          result: result,
+          errorMsg: errorMsg,
+          fullError: JSON.stringify(result, null, 2)
+        });
+        
+        // Hiển thị alert với message chi tiết
+        alert(`❌ ${errorMsg}\n\nVui lòng kiểm tra:\n1. Migration đã chạy chưa (RoleId=3)\n2. Username đã tồn tại chưa\n3. Password >= 8 ký tự\n4. Backend logs để xem chi tiết`);
+      }
+    } catch (error) {
+      console.error('[Admin] Error creating moderator:', {
+        error: error,
+        message: error.message,
+        stack: error.stack
+      });
+      alert(`❌ Lỗi: ${error.message || 'Có lỗi xảy ra khi tạo tài khoản'}\n\nVui lòng mở Console (F12) để xem chi tiết.`);
     }
   };
 
-  const handleUpdateStreakMilestone = async (e) => {
-    e.preventDefault();
-    if (!streakValue || !milestoneName) {
-      alert('Vui lòng điền đầy đủ thông tin');
-      return;
-    }
-    const result = await updateStreakMilestone(parseInt(streakValue), {
-      color: milestoneColor,
-      emoji: milestoneEmoji,
-      name: milestoneName
-    });
-    if (result.success) {
-      alert(result.message || `Đã cập nhật milestone streak ${streakValue}`);
-      setStreakValue('');
-      setMilestoneName('');
-    } else {
-      alert(result.message || 'Có lỗi xảy ra khi cập nhật milestone');
-    }
-  };
-
-  const handleUpdateActionReward = async (e) => {
-    e.preventDefault();
-    if (!actionTag) {
-      alert('Vui lòng nhập tag');
-      return;
-    }
-    const result = await updateActionReward(actionTag, {
-      streak: parseInt(actionStreak),
-      ecoTokens: parseInt(actionTokens)
-    });
-    if (result.success) {
-      alert(result.message || `Đã cập nhật phần thưởng cho tag: ${actionTag}`);
-      setActionTag('');
-      setActionStreak('1');
-      setActionTokens('10');
-    } else {
-      alert(result.message || 'Có lỗi xảy ra khi cập nhật phần thưởng');
-    }
-  };
-
-  const handleUpdateDefaultReward = async (e) => {
-    e.preventDefault();
-    const result = await updateDefaultActionReward({
-      streak: parseInt(actionStreak),
-      ecoTokens: parseInt(actionTokens)
-    });
-    if (result.success) {
-      alert(result.message || 'Đã cập nhật phần thưởng mặc định');
-      setActionStreak('1');
-      setActionTokens('10');
-    } else {
-      alert(result.message || 'Có lỗi xảy ra khi cập nhật phần thưởng mặc định');
-    }
-  };
 
   const handleEditUser = (user) => {
     setSelectedUser(user);
@@ -144,13 +195,334 @@ const Admin = () => {
 
   const handleSaveUser = async () => {
     if (!selectedUser) return;
-    const result = await updateUser(selectedUser.id, selectedUser);
+    
+    // Map frontend data sang backend format
+    const updateData = {
+      name: selectedUser.name || selectedUser.nickname || null,
+      phoneNumber: selectedUser.phone || selectedUser.phoneNumber || null,
+      address: selectedUser.address || null,
+      gender: selectedUser.gender || null,
+      currentPoints: selectedUser.currentPoints ?? selectedUser.ecoTokens ?? null,
+      streak: selectedUser.streak ?? null,
+    };
+
+    // Remove null values
+    Object.keys(updateData).forEach(key => {
+      if (updateData[key] === null) {
+        delete updateData[key];
+      }
+    });
+
+    const result = await updateUser(selectedUser.id, updateData);
     if (result.success) {
       alert(result.message || 'Đã cập nhật thông tin user');
       setSelectedUser(null);
       await loadAllUsers();
     } else {
       alert(result.message || 'Có lỗi xảy ra khi cập nhật user');
+    }
+  };
+
+  const handleDeleteUser = async (userId, username) => {
+    if (!window.confirm(`Bạn có chắc chắn muốn xóa user "${username}"?\n\nLưu ý: Hành động này không thể hoàn tác.`)) {
+      return;
+    }
+
+    const result = await deleteUser(userId);
+    if (result.success) {
+      alert(result.message || 'Đã xóa user thành công');
+      await loadAllUsers();
+    } else {
+      alert(result.message || 'Có lỗi xảy ra khi xóa user');
+    }
+  };
+
+  // Item Modal Handlers
+  const handleOpenAddItemModal = () => {
+    setSelectedItem(null);
+    setItemForm({ name: '', requiredPoints: '', tag: 'handmade', imageFile: null });
+    setShowItemModal(true);
+  };
+
+  const handleOpenEditItemModal = (item) => {
+    setSelectedItem(item);
+    setItemForm({
+      name: item.name,
+      requiredPoints: item.requiredPoints || item.price || '',
+      tag: item.tag || item.category || 'handmade',
+      imageFile: null
+    });
+    setShowItemModal(true);
+  };
+
+  const handleCloseItemModal = () => {
+    setShowItemModal(false);
+    setSelectedItem(null);
+    setItemForm({ name: '', requiredPoints: '', tag: 'handmade', imageFile: null });
+  };
+
+  const handleSubmitItem = async (e) => {
+    e.preventDefault();
+    try {
+      if (selectedItem) {
+        // Update
+        const result = await updateItemApi(selectedItem.id, {
+          name: itemForm.name,
+          requiredPoints: parseInt(itemForm.requiredPoints),
+          tag: itemForm.tag,
+          imageFile: itemForm.imageFile
+        });
+        if (result.success) {
+          alert(result.message);
+          handleCloseItemModal();
+          // Reload items
+          const response = await getAllItemsApi();
+          if (response.success) setItems(response.data || []);
+        } else {
+          alert(result.message);
+        }
+      } else {
+        // Add
+        const result = await addItemApi({
+          name: itemForm.name,
+          requiredPoints: parseInt(itemForm.requiredPoints),
+          tag: itemForm.tag,
+          imageFile: itemForm.imageFile
+        });
+        if (result.success) {
+          alert(result.message);
+          handleCloseItemModal();
+          // Reload items
+          const response = await getAllItemsApi();
+          if (response.success) setItems(response.data || []);
+        } else {
+          alert(result.message);
+        }
+      }
+    } catch (error) {
+      console.error('[Admin] Error submitting item:', error);
+      alert('Có lỗi xảy ra: ' + (error.message || 'Không xác định'));
+    }
+  };
+
+  const handleOpenDeleteModal = (item) => {
+    setItemToDelete(item);
+    setShowDeleteModal(true);
+  };
+
+  const handleCloseDeleteModal = () => {
+    setShowDeleteModal(false);
+    setItemToDelete(null);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!itemToDelete) return;
+    
+    try {
+      const result = await deleteItemApi(itemToDelete.id);
+      if (result.success) {
+        alert(result.message);
+        handleCloseDeleteModal();
+        // Reload items
+        const response = await getAllItemsApi();
+        if (response.success) setItems(response.data || []);
+      } else {
+        alert(result.message);
+      }
+    } catch (error) {
+      console.error('[Admin] Error deleting item:', error);
+      alert('Có lỗi xảy ra: ' + (error.message || 'Không xác định'));
+    }
+  };
+
+  // Streak Milestone Handlers
+  const handleOpenAddStreakModal = () => {
+    setStreakForm({ streak: '', color: '#FFD700', emoji: '🌟', name: '' });
+    setShowStreakModal(true);
+  };
+
+  const handleOpenEditStreakModal = (streakValue, milestone) => {
+    setStreakForm({
+      streak: streakValue.toString(),
+      color: milestone.color || '#FFD700',
+      emoji: milestone.emoji || '🌟',
+      name: milestone.name || ''
+    });
+    setShowStreakModal(true);
+  };
+
+  const handleCloseStreakModal = () => {
+    setShowStreakModal(false);
+    setShowEmojiPicker(false);
+    setStreakForm({ streak: '', color: '#FFD700', emoji: '🌟', name: '' });
+  };
+
+  const handleSubmitStreak = async (e) => {
+    e.preventDefault();
+    if (!streakForm.streak || !streakForm.name || !streakForm.emoji) {
+      alert('Vui lòng điền đầy đủ thông tin (số ngày, tên linh vật, và chọn emoji)');
+      return;
+    }
+    try {
+      const result = await updateStreakMilestone(parseInt(streakForm.streak), {
+        color: streakForm.color,
+        emoji: streakForm.emoji,
+        name: streakForm.name
+      });
+      if (result.success) {
+        alert(result.message || `Đã cập nhật milestone streak ${streakForm.streak}`);
+        handleCloseStreakModal();
+      } else {
+        alert(result.message || 'Có lỗi xảy ra khi cập nhật milestone');
+      }
+    } catch (error) {
+      console.error('[Admin] Error submitting streak:', error);
+      alert('Có lỗi xảy ra: ' + (error.message || 'Không xác định'));
+    }
+  };
+
+  // Đóng emoji picker khi click bên ngoài
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (showEmojiPicker && !event.target.closest('.emoji-picker-container')) {
+        setShowEmojiPicker(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showEmojiPicker]);
+
+  const handleOpenDeleteStreakModal = (streakValue) => {
+    setStreakToDelete(streakValue);
+    setShowDeleteStreakModal(true);
+  };
+
+  const handleCloseDeleteStreakModal = () => {
+    setShowDeleteStreakModal(false);
+    setStreakToDelete(null);
+  };
+
+  const handleConfirmDeleteStreak = async () => {
+    if (!streakToDelete) return;
+    
+    try {
+      const result = await deleteStreakMilestone(streakToDelete);
+      if (result.success) {
+        alert(result.message || 'Đã xóa milestone thành công');
+        handleCloseDeleteStreakModal();
+      } else {
+        alert(result.message || 'Có lỗi xảy ra khi xóa milestone');
+      }
+    } catch (error) {
+      console.error('[Admin] Error deleting streak:', error);
+      alert('Có lỗi xảy ra: ' + (error.message || 'Không xác định'));
+    }
+  };
+
+  // Action Reward Handlers
+  const handleOpenAddActionModal = () => {
+    setIsEditingDefault(false);
+    setActionForm({ tag: '', streak: '1', ecoTokens: '10' });
+    setShowActionModal(true);
+  };
+
+  const handleOpenEditDefaultModal = () => {
+    setIsEditingDefault(true);
+    setActionForm({
+      tag: '', // Empty tag for default
+      streak: (config.actionRewards?.default?.streak || 1).toString(),
+      ecoTokens: (config.actionRewards?.default?.ecoTokens || 10).toString()
+    });
+    setShowActionModal(true);
+  };
+
+  const handleOpenEditActionModal = (tag, reward) => {
+    setIsEditingDefault(false);
+    setActionForm({
+      tag: tag,
+      streak: (reward.streak || 1).toString(),
+      ecoTokens: (reward.ecoTokens || 10).toString()
+    });
+    setShowActionModal(true);
+  };
+
+  const handleCloseActionModal = () => {
+    setShowActionModal(false);
+    setIsEditingDefault(false);
+    setActionForm({ tag: '', streak: '1', ecoTokens: '10' });
+  };
+
+  const handleSubmitAction = async (e) => {
+    e.preventDefault();
+    
+    // Nếu đang edit default reward
+    if (isEditingDefault) {
+      try {
+        const result = await updateDefaultActionReward({
+          streak: parseInt(actionForm.streak),
+          ecoTokens: parseInt(actionForm.ecoTokens)
+        });
+        if (result.success) {
+          alert(result.message || 'Đã cập nhật phần thưởng mặc định');
+          handleCloseActionModal();
+        } else {
+          alert(result.message || 'Có lỗi xảy ra khi cập nhật phần thưởng mặc định');
+        }
+      } catch (error) {
+        console.error('[Admin] Error submitting default reward:', error);
+        alert('Có lỗi xảy ra: ' + (error.message || 'Không xác định'));
+      }
+      return;
+    }
+
+    // Nếu đang add/edit action reward có tag
+    if (!actionForm.tag) {
+      alert('Vui lòng nhập tag');
+      return;
+    }
+    try {
+      const result = await updateActionReward(actionForm.tag, {
+        streak: parseInt(actionForm.streak),
+        ecoTokens: parseInt(actionForm.ecoTokens)
+      });
+      if (result.success) {
+        alert(result.message || 'Đã cập nhật phần thưởng');
+        handleCloseActionModal();
+      } else {
+        alert(result.message || 'Có lỗi xảy ra khi cập nhật phần thưởng');
+      }
+    } catch (error) {
+      console.error('[Admin] Error submitting action:', error);
+      alert('Có lỗi xảy ra: ' + (error.message || 'Không xác định'));
+    }
+  };
+
+  const handleOpenDeleteActionModal = (tag) => {
+    setActionToDelete(tag);
+    setShowDeleteActionModal(true);
+  };
+
+  const handleCloseDeleteActionModal = () => {
+    setShowDeleteActionModal(false);
+    setActionToDelete(null);
+  };
+
+  const handleConfirmDeleteAction = async () => {
+    if (!actionToDelete) return;
+    
+    try {
+      const result = await deleteActionReward(actionToDelete);
+      if (result.success) {
+        alert(result.message || 'Đã xóa action reward thành công');
+        handleCloseDeleteActionModal();
+      } else {
+        alert(result.message || 'Có lỗi xảy ra khi xóa action reward');
+      }
+    } catch (error) {
+      console.error('[Admin] Error deleting action:', error);
+      alert('Có lỗi xảy ra: ' + (error.message || 'Không xác định'));
     }
   };
 
@@ -169,16 +541,10 @@ const Admin = () => {
           👮 Tạo Moderator
         </button>
         <button
-          className={activeTab === 'gifts' ? 'active' : ''}
-          onClick={() => setActiveTab('gifts')}
+          className={activeTab === 'items' ? 'active' : ''}
+          onClick={() => setActiveTab('items')}
         >
-          🎁 Quản lý Quà
-        </button>
-        <button
-          className={activeTab === 'streaks' ? 'active' : ''}
-          onClick={() => setActiveTab('streaks')}
-        >
-          🔥 Quản lý Streak
+          🎁 Quản lý Items
         </button>
         <button
           className={activeTab === 'rewards' ? 'active' : ''}
@@ -196,15 +562,15 @@ const Admin = () => {
 
       {activeTab === 'moderators' && (
         <div className="admin-section">
-          <h2>Tạo tài khoản kiểm duyệt</h2>
+          <h2>Tạo tài khoản kiểm duyệt / User</h2>
           <form onSubmit={handleCreateModerator} className="admin-form">
             <div className="form-group">
-              <label>Email *</label>
+              <label>Username (Email) *</label>
               <input
-                type="email"
+                type="text"
                 value={modEmail}
                 onChange={(e) => setModEmail(e.target.value)}
-                placeholder="Email đăng nhập"
+                placeholder="Username (có thể dùng email)"
                 required
               />
             </div>
@@ -228,181 +594,371 @@ const Admin = () => {
                 required
               />
             </div>
-            <button type="submit" className="submit-btn">Tạo Moderator</button>
+            <div className="form-group">
+              <label>Vai trò (Role) *</label>
+              <select
+                value={modRole}
+                onChange={(e) => setModRole(e.target.value)}
+                required
+              >
+                <option value="moderator">Moderator (Kiểm duyệt viên)</option>
+                <option value="user">User (Người dùng thường)</option>
+              </select>
+              <p style={{ fontSize: '0.9em', color: '#666', marginTop: '5px' }}>
+                {modRole === 'moderator' 
+                  ? 'Moderator có quyền duyệt bài và quản lý user bình thường' 
+                  : 'User chỉ có quyền đăng bài và đổi quà'}
+              </p>
+            </div>
+            <button type="submit" className="submit-btn">
+              Tạo {modRole === 'moderator' ? 'Moderator' : 'User'}
+            </button>
           </form>
         </div>
       )}
 
-      {activeTab === 'gifts' && (
+      {activeTab === 'items' && (
         <div className="admin-section">
-          <h2>Quy định điểm đổi quà</h2>
-          <form onSubmit={handleUpdateGiftPrice} className="admin-form">
-            <div className="form-group">
-              <label>ID Quà *</label>
-              <input
-                type="number"
-                value={giftId}
-                onChange={(e) => setGiftId(e.target.value)}
-                placeholder="ID của quà (1-8)"
-                required
-              />
-            </div>
-            <div className="form-group">
-              <label>Giá (Eco Tokens) *</label>
-              <input
-                type="number"
-                value={giftPrice}
-                onChange={(e) => setGiftPrice(e.target.value)}
-                placeholder="Số Eco Tokens cần để đổi"
-                required
-              />
-            </div>
-            <button type="submit" className="submit-btn">Cập nhật giá</button>
-          </form>
-          <div className="current-config">
-            <h3>Giá quà hiện tại:</h3>
-            <div className="config-list">
-              {Object.entries(config.giftPrices).map(([id, price]) => (
-                <div key={id} className="config-item">
-                  Quà ID {id}: {price} Eco Tokens
-                </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <h2 style={{ margin: 0 }}>Quản lý Items (Quà tặng)</h2>
+            <button
+              onClick={handleOpenAddItemModal}
+              className="submit-btn"
+              style={{ padding: '10px 20px', fontSize: '1em' }}
+            >
+              + Thêm Item mới
+            </button>
+          </div>
+
+          {/* Category Filter */}
+          <div style={{ marginBottom: '20px' }}>
+            <h3>Danh sách Items</h3>
+            <div className="category-filter" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '20px' }}>
+              {categories.map(category => (
+                <button
+                  key={category}
+                  className={`category-btn ${selectedCategory === category ? 'active' : ''}`}
+                  onClick={() => setSelectedCategory(category)}
+                  style={{
+                    padding: '8px 16px',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px',
+                    background: selectedCategory === category ? '#4a7c2a' : 'white',
+                    color: selectedCategory === category ? 'white' : '#333',
+                    cursor: 'pointer'
+                  }}
+                >
+                  {category === 'all' ? 'Tất cả' :
+                   category === 'handmade' ? 'Handmade' :
+                   category === 'vouchers' ? 'Voucher' :
+                   category === 'books' ? 'Sách' :
+                   category === 'movies' ? 'Phim' :
+                   'Quyên góp'}
+                </button>
               ))}
             </div>
           </div>
-        </div>
-      )}
 
-      {activeTab === 'streaks' && (
-        <div className="admin-section">
-          <h2>Quy ước điểm linh vật (Streak Milestones)</h2>
-          <form onSubmit={handleUpdateStreakMilestone} className="admin-form">
-            <div className="form-group">
-              <label>Số ngày Streak *</label>
-              <input
-                type="number"
-                value={streakValue}
-                onChange={(e) => setStreakValue(e.target.value)}
-                placeholder="Ví dụ: 50, 100"
-                required
-              />
-            </div>
-            <div className="form-group">
-              <label>Màu sắc</label>
-              <input
-                type="color"
-                value={milestoneColor}
-                onChange={(e) => setMilestoneColor(e.target.value)}
-              />
-            </div>
-            <div className="form-group">
-              <label>Emoji</label>
-              <input
-                type="text"
-                value={milestoneEmoji}
-                onChange={(e) => setMilestoneEmoji(e.target.value)}
-                placeholder="🌟"
-              />
-            </div>
-            <div className="form-group">
-              <label>Tên linh vật *</label>
-              <input
-                type="text"
-                value={milestoneName}
-                onChange={(e) => setMilestoneName(e.target.value)}
-                placeholder="Ví dụ: Linh vật vàng"
-                required
-              />
-            </div>
-            <button type="submit" className="submit-btn">Cập nhật Milestone</button>
-          </form>
-          <div className="current-config">
-            <h3>Milestones hiện tại:</h3>
-            <div className="config-list">
-              {Object.entries(config.streakMilestones).map(([streak, milestone]) => (
-                <div key={streak} className="config-item">
-                  {milestone.emoji} Streak {streak}: {milestone.name} ({milestone.color})
+          {/* Items List */}
+          <div>
+            {(() => {
+              const filteredItems = selectedCategory === 'all'
+                ? items
+                : items.filter(item => (item.tag || item.category || 'handmade') === selectedCategory);
+              
+              return (
+                <>
+                  <p style={{ color: '#666', marginBottom: '10px' }}>
+                    Hiển thị {filteredItems.length} / {items.length} items
+                  </p>
+                  <div className="items-list" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '20px', marginTop: '20px' }}>
+              {filteredItems.map(item => {
+                console.log('[Admin] Rendering item:', {
+                  id: item.id,
+                  name: item.name,
+                  imageUrl: item.imageUrl,
+                  hasImageUrl: !!item.imageUrl
+                });
+                
+                return (
+                  <div key={item.id} className="item-card" style={{ border: '1px solid #ddd', padding: '15px', borderRadius: '8px' }}>
+                    {item.imageUrl ? (
+                      <img 
+                        src={item.imageUrl} 
+                        alt={item.name} 
+                        style={{ width: '100%', height: '150px', objectFit: 'cover', borderRadius: '4px', marginBottom: '10px' }}
+                        onError={(e) => {
+                          const errorDetails = {
+                            src: item.imageUrl,
+                            itemName: item.name,
+                            itemId: item.id,
+                            error: e.target.error?.message || 'Unknown error',
+                            status: e.target.naturalWidth === 0 ? 'Failed to load' : 'Partial load'
+                          };
+                          console.error('[Admin] Image load error:', errorDetails);
+                          
+                          // Hiển thị placeholder thay vì ẩn hoàn toàn
+                          e.target.style.display = 'none';
+                          const placeholder = document.createElement('div');
+                          placeholder.style.cssText = 'width: 100%; height: 150px; background-color: #f0f0f0; display: flex; align-items: center; justify-content: center; border-radius: 4px; margin-bottom: 10px;';
+                          placeholder.innerHTML = '<span style="color: #999;">📦 Ảnh không tải được</span>';
+                          e.target.parentNode.insertBefore(placeholder, e.target);
+                        }}
+                        onLoad={() => {
+                          console.log('[Admin] Image loaded successfully:', item.imageUrl);
+                        }}
+                      />
+                    ) : (
+                      <div style={{ width: '100%', height: '150px', backgroundColor: '#f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '4px', marginBottom: '10px' }}>
+                        <span style={{ color: '#999' }}>📦 Không có ảnh</span>
+                      </div>
+                    )}
+                  <h4>{item.name}</h4>
+                  <p>Điểm: {item.requiredPoints || item.price}</p>
+                  <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+                    <button
+                      className="edit-btn"
+                      onClick={() => handleOpenEditItemModal(item)}
+                      style={{
+                        flex: 1,
+                        padding: '8px 16px',
+                        backgroundColor: '#4a7c2a',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '14px'
+                      }}
+                    >
+                      Sửa
+                    </button>
+                    <button
+                      className="delete-btn"
+                      onClick={() => handleOpenDeleteModal(item)}
+                      style={{
+                        flex: 1,
+                        padding: '8px 16px',
+                        backgroundColor: '#dc3545',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '14px'
+                      }}
+                    >
+                      Xóa
+                    </button>
+                  </div>
                 </div>
-              ))}
-            </div>
+                );
+              })}
+                  </div>
+                  {filteredItems.length === 0 && (
+                    <p style={{ textAlign: 'center', color: '#666', marginTop: '20px' }}>Không có items nào trong danh mục này</p>
+                  )}
+                </>
+              );
+            })()}
           </div>
         </div>
       )}
 
       {activeTab === 'rewards' && (
         <div className="admin-section">
-          <h2>Quy ước điểm bài đăng sống xanh theo tag</h2>
-          <form onSubmit={handleUpdateActionReward} className="admin-form">
-            <div className="form-group">
-              <label>Tag hành động *</label>
-              <input
-                type="text"
-                value={actionTag}
-                onChange={(e) => setActionTag(e.target.value)}
-                placeholder="Ví dụ: xe-dap, trong-cay, mang-coc"
-                required
-              />
-            </div>
-            <div className="form-row">
-              <div className="form-group">
-                <label>Streak</label>
-                <input
-                  type="number"
-                  value={actionStreak}
-                  onChange={(e) => setActionStreak(e.target.value)}
-                  min="0"
-                />
-              </div>
-              <div className="form-group">
-                <label>Eco Tokens</label>
-                <input
-                  type="number"
-                  value={actionTokens}
-                  onChange={(e) => setActionTokens(e.target.value)}
-                  min="0"
-                />
-              </div>
-            </div>
-            <button type="submit" className="submit-btn">Cập nhật phần thưởng</button>
-          </form>
-          <div className="admin-form" style={{ marginTop: '30px' }}>
-            <h3>Cập nhật phần thưởng mặc định</h3>
-            <form onSubmit={handleUpdateDefaultReward}>
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Streak mặc định</label>
-                  <input
-                    type="number"
-                    value={actionStreak}
-                    onChange={(e) => setActionStreak(e.target.value)}
-                    min="0"
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Eco Tokens mặc định</label>
-                  <input
-                    type="number"
-                    value={actionTokens}
-                    onChange={(e) => setActionTokens(e.target.value)}
-                    min="0"
-                  />
-                </div>
-              </div>
-              <button type="submit" className="submit-btn">Cập nhật mặc định</button>
-            </form>
+          <h2>Quản lý Phần thưởng</h2>
+
+          {/* Sub-tabs */}
+          <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', borderBottom: '2px solid #e0e0e0' }}>
+            <button
+              className={rewardsSubTab === 'streaks' ? 'active' : ''}
+              onClick={() => setRewardsSubTab('streaks')}
+              style={{
+                padding: '10px 20px',
+                border: 'none',
+                background: 'transparent',
+                cursor: 'pointer',
+                fontSize: '1em',
+                color: rewardsSubTab === 'streaks' ? '#FFD700' : '#666',
+                borderBottom: rewardsSubTab === 'streaks' ? '3px solid #FFD700' : '3px solid transparent',
+                fontWeight: rewardsSubTab === 'streaks' ? '600' : '400',
+                transition: 'all 0.3s'
+              }}
+            >
+              🔥 Streak Milestones
+            </button>
+            <button
+              className={rewardsSubTab === 'actions' ? 'active' : ''}
+              onClick={() => setRewardsSubTab('actions')}
+              style={{
+                padding: '10px 20px',
+                border: 'none',
+                background: 'transparent',
+                cursor: 'pointer',
+                fontSize: '1em',
+                color: rewardsSubTab === 'actions' ? '#FFD700' : '#666',
+                borderBottom: rewardsSubTab === 'actions' ? '3px solid #FFD700' : '3px solid transparent',
+                fontWeight: rewardsSubTab === 'actions' ? '600' : '400',
+                transition: 'all 0.3s'
+              }}
+            >
+              🎯 Action Rewards
+            </button>
           </div>
-          <div className="current-config">
-            <h3>Phần thưởng theo tag hiện tại:</h3>
-            <div className="config-list">
-              <div className="config-item">
-                Mặc định: {config.actionRewards.default.streak} Streak, {config.actionRewards.default.ecoTokens} Tokens
+
+          {/* Streak Milestones Tab */}
+          {rewardsSubTab === 'streaks' && (
+            <>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                <h3 style={{ margin: 0 }}>Quy ước điểm linh vật (Streak Milestones)</h3>
+                <button
+                  onClick={handleOpenAddStreakModal}
+                  className="submit-btn"
+                  style={{ padding: '10px 20px', fontSize: '1em' }}
+                >
+                  + Thêm Milestone
+                </button>
               </div>
-              {Object.entries(config.actionRewards.tags).map(([tag, reward]) => (
-                <div key={tag} className="config-item">
-                  {tag}: {reward.streak} Streak, {reward.ecoTokens} Tokens
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '15px', marginTop: '20px' }}>
+                {Object.entries(config.streakMilestones || {}).map(([streak, milestone]) => (
+                  <div key={streak} className="config-item" style={{ padding: '15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <div style={{ fontSize: '1.5em', marginBottom: '5px' }}>{milestone.emoji}</div>
+                      <div><strong>Streak {streak}</strong></div>
+                      <div style={{ color: '#666' }}>{milestone.name}</div>
+                      <div style={{ fontSize: '0.9em', color: milestone.color || '#666' }}>
+                        Màu: <span style={{ backgroundColor: milestone.color || '#666', width: '20px', height: '20px', display: 'inline-block', borderRadius: '4px', verticalAlign: 'middle' }}></span>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                      <button
+                        onClick={() => handleOpenEditStreakModal(streak, milestone)}
+                        style={{
+                          padding: '8px 16px',
+                          backgroundColor: '#4a7c2a',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontSize: '14px'
+                        }}
+                      >
+                        Sửa
+                      </button>
+                      <button
+                        onClick={() => handleOpenDeleteStreakModal(streak)}
+                        style={{
+                          padding: '8px 16px',
+                          backgroundColor: '#dc3545',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontSize: '14px'
+                        }}
+                      >
+                        Xóa
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                {Object.keys(config.streakMilestones || {}).length === 0 && (
+                  <div style={{ textAlign: 'center', padding: '40px', color: '#666', gridColumn: '1 / -1' }}>
+                    <p>Chưa có milestone nào. Nhấn "+ Thêm Milestone" để thêm mới.</p>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+
+          {/* Action Rewards Tab */}
+          {rewardsSubTab === 'actions' && (
+            <>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                <h3 style={{ margin: 0 }}>Quy ước điểm bài đăng sống xanh theo tag</h3>
+                <button
+                  onClick={handleOpenAddActionModal}
+                  className="submit-btn"
+                  style={{ padding: '10px 20px', fontSize: '1em' }}
+                >
+                  + Thêm Reward
+                </button>
+              </div>
+
+              {/* Default Reward */}
+              <div style={{ marginBottom: '30px', padding: '15px', backgroundColor: '#f9f9f9', borderRadius: '8px' }}>
+                <h4 style={{ margin: '0 0 15px 0' }}>Phần thưởng mặc định</h4>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <div><strong>Mặc định:</strong> {config.actionRewards?.default?.streak || 1} Streak, {config.actionRewards?.default?.ecoTokens || 10} Tokens</div>
+                  </div>
+                  <button
+                    onClick={handleOpenEditDefaultModal}
+                    style={{
+                      padding: '8px 16px',
+                      backgroundColor: '#4a7c2a',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      fontSize: '14px'
+                    }}
+                  >
+                    Sửa
+                  </button>
                 </div>
-              ))}
-            </div>
-          </div>
+              </div>
+
+              {/* Action Rewards List */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '15px', marginTop: '20px' }}>
+                {Object.entries(config.actionRewards?.tags || {}).map(([tag, reward]) => (
+                  <div key={tag} className="config-item" style={{ padding: '15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <div><strong>Tag: {tag}</strong></div>
+                      <div style={{ color: '#666', marginTop: '5px' }}>
+                        {reward.streak || 1} Streak, {reward.ecoTokens || 10} Tokens
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                      <button
+                        onClick={() => handleOpenEditActionModal(tag, reward)}
+                        style={{
+                          padding: '8px 16px',
+                          backgroundColor: '#4a7c2a',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontSize: '14px'
+                        }}
+                      >
+                        Sửa
+                      </button>
+                      <button
+                        onClick={() => handleOpenDeleteActionModal(tag)}
+                        style={{
+                          padding: '8px 16px',
+                          backgroundColor: '#dc3545',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontSize: '14px'
+                        }}
+                      >
+                        Xóa
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                {Object.keys(config.actionRewards?.tags || {}).length === 0 && (
+                  <div style={{ textAlign: 'center', padding: '40px', color: '#666', gridColumn: '1 / -1' }}>
+                    <p>Chưa có action reward nào. Nhấn "+ Thêm Reward" để thêm mới.</p>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
         </div>
       )}
 
@@ -418,8 +974,17 @@ const Admin = () => {
               className="search-input"
             />
           </div>
-          <div className="users-list">
-            {filteredUsers.map((u) => (
+          {filteredUsers.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
+              <p>{searchTerm ? 'Không tìm thấy user nào' : 'Chưa có user nào trong hệ thống'}</p>
+            </div>
+          ) : (
+            <>
+              <p style={{ color: '#666', marginBottom: '10px' }}>
+                Hiển thị {filteredUsers.length} / {allUsers?.length || 0} users
+              </p>
+              <div className="users-list">
+                {filteredUsers.map((u) => (
               <div key={u.id} className="user-card">
                 <div className="user-info">
                   {u.avatarImage ? (
@@ -428,57 +993,99 @@ const Admin = () => {
                     <div className="user-avatar">{u.avatar || '👤'}</div>
                   )}
                   <div className="user-details">
-                    <h3>{u.nickname || 'Chưa có tên'}</h3>
-                    <p>Email: {u.email || 'N/A'}</p>
-                    <p>SĐT: {u.phone || 'N/A'}</p>
-                    <p>Role: {u.role || 'user'}</p>
-                    {u.ecoTokens !== undefined && <p>Eco Tokens: {u.ecoTokens}</p>}
+                    <h3>{u.name || u.nickname || u.username || 'Chưa có tên'}</h3>
+                    <p>Username: {u.username || 'N/A'}</p>
+                    <p>SĐT: {u.phone || u.phoneNumber || 'N/A'}</p>
+                    <p>Role: {u.roleName || u.role || 'user'}</p>
+                    <p>Eco Tokens: {u.currentPoints ?? u.ecoTokens ?? 0}</p>
                     {u.streak !== undefined && <p>Streak: {u.streak}</p>}
                   </div>
                 </div>
-                <button className="edit-btn" onClick={() => handleEditUser(u)}>
-                  Chỉnh sửa
-                </button>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <button className="edit-btn" onClick={() => handleEditUser(u)}>
+                    Chỉnh sửa
+                  </button>
+                  {u.roleId !== 2 && ( // Không hiển thị nút xóa cho Admin
+                    <button 
+                      className="delete-btn" 
+                      onClick={() => handleDeleteUser(u.id, u.username || u.name || 'user')}
+                      style={{
+                        backgroundColor: '#dc3545',
+                        color: 'white',
+                        border: 'none',
+                        padding: '8px 16px',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '14px'
+                      }}
+                    >
+                      Xóa
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
-          </div>
+              </div>
+            </>
+          )}
         </div>
       )}
 
       {selectedUser && (
         <div className="modal-overlay" onClick={() => setSelectedUser(null)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <h2>Chỉnh sửa User: {selectedUser.nickname}</h2>
+            <h2>Chỉnh sửa User: {selectedUser.name || selectedUser.nickname || selectedUser.username}</h2>
             <div className="form-group">
-              <label>Nickname</label>
+              <label>Tên (Name)</label>
               <input
                 type="text"
-                value={selectedUser.nickname || ''}
-                onChange={(e) => setSelectedUser({ ...selectedUser, nickname: e.target.value })}
+                value={selectedUser.name || selectedUser.nickname || ''}
+                onChange={(e) => setSelectedUser({ ...selectedUser, name: e.target.value, nickname: e.target.value })}
               />
             </div>
             <div className="form-group">
-              <label>Email</label>
+              <label>Username (Không thể sửa)</label>
               <input
-                type="email"
-                value={selectedUser.email || ''}
-                onChange={(e) => setSelectedUser({ ...selectedUser, email: e.target.value })}
+                type="text"
+                value={selectedUser.username || ''}
+                disabled
+                style={{ background: '#f5f5f5' }}
               />
             </div>
             <div className="form-group">
               <label>Số điện thoại</label>
               <input
                 type="tel"
-                value={selectedUser.phone || ''}
-                onChange={(e) => setSelectedUser({ ...selectedUser, phone: e.target.value })}
+                value={selectedUser.phone || selectedUser.phoneNumber || ''}
+                onChange={(e) => setSelectedUser({ ...selectedUser, phone: e.target.value, phoneNumber: e.target.value })}
               />
             </div>
             <div className="form-group">
-              <label>Eco Tokens</label>
+              <label>Địa chỉ</label>
+              <input
+                type="text"
+                value={selectedUser.address || ''}
+                onChange={(e) => setSelectedUser({ ...selectedUser, address: e.target.value })}
+              />
+            </div>
+            <div className="form-group">
+              <label>Giới tính</label>
+              <select
+                value={selectedUser.gender || ''}
+                onChange={(e) => setSelectedUser({ ...selectedUser, gender: e.target.value })}
+              >
+                <option value="">Chọn giới tính</option>
+                <option value="Nam">Nam</option>
+                <option value="Nữ">Nữ</option>
+                <option value="Khác">Khác</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label>Eco Tokens (Current Points)</label>
               <input
                 type="number"
-                value={selectedUser.ecoTokens || 0}
-                onChange={(e) => setSelectedUser({ ...selectedUser, ecoTokens: parseInt(e.target.value) || 0 })}
+                value={selectedUser.currentPoints ?? selectedUser.ecoTokens ?? 0}
+                onChange={(e) => setSelectedUser({ ...selectedUser, currentPoints: parseInt(e.target.value) || 0, ecoTokens: parseInt(e.target.value) || 0 })}
               />
             </div>
             <div className="form-group">
@@ -500,6 +1107,543 @@ const Admin = () => {
             <div className="modal-actions">
               <button className="save-btn" onClick={handleSaveUser}>Lưu</button>
               <button className="cancel-btn" onClick={() => setSelectedUser(null)}>Hủy</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Item Modal (Add/Edit) */}
+      {showItemModal && (
+        <div className="modal-overlay" onClick={handleCloseItemModal}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>{selectedItem ? 'Chỉnh sửa Item' : 'Thêm Item mới'}</h3>
+              <button className="modal-close" onClick={handleCloseItemModal}>×</button>
+            </div>
+            <form onSubmit={handleSubmitItem} className="modal-form">
+              <div className="form-group">
+                <label>Tên Item *</label>
+                <input
+                  type="text"
+                  value={itemForm.name}
+                  onChange={(e) => setItemForm({ ...itemForm, name: e.target.value })}
+                  placeholder="Tên item"
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label>Điểm yêu cầu (Required Points) *</label>
+                <input
+                  type="number"
+                  value={itemForm.requiredPoints}
+                  onChange={(e) => setItemForm({ ...itemForm, requiredPoints: e.target.value })}
+                  placeholder="Số điểm cần để đổi"
+                  min="1"
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label>Tag/Category *</label>
+                <select
+                  value={itemForm.tag}
+                  onChange={(e) => setItemForm({ ...itemForm, tag: e.target.value })}
+                  required
+                >
+                  <option value="handmade">Handmade</option>
+                  <option value="vouchers">Voucher</option>
+                  <option value="books">Sách</option>
+                  <option value="movies">Phim</option>
+                  <option value="donations">Quyên góp</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Ảnh Item</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setItemForm({ ...itemForm, imageFile: e.target.files[0] })}
+                />
+              </div>
+              <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+                <button type="submit" className="submit-btn" style={{ flex: 1 }}>
+                  {selectedItem ? 'Cập nhật' : 'Thêm mới'}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCloseItemModal}
+                  style={{
+                    flex: 1,
+                    padding: '15px',
+                    border: '2px solid #ddd',
+                    borderRadius: '10px',
+                    fontSize: '1.1em',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    background: 'white',
+                    color: '#333'
+                  }}
+                >
+                  Hủy
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && itemToDelete && (
+        <div className="modal-overlay" onClick={handleCloseDeleteModal}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '400px' }}>
+            <div className="modal-header">
+              <h3>Xác nhận xóa Item</h3>
+              <button className="modal-close" onClick={handleCloseDeleteModal}>×</button>
+            </div>
+            <div className="modal-body">
+              <p>Bạn có chắc chắn muốn xóa item <strong>"{itemToDelete.name}"</strong>?</p>
+              <p style={{ color: '#dc3545', fontSize: '0.9em', marginTop: '10px' }}>
+                ⚠️ Hành động này không thể hoàn tác.
+              </p>
+            </div>
+            <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+              <button
+                onClick={handleConfirmDelete}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  backgroundColor: '#dc3545',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '1em',
+                  fontWeight: '600',
+                  cursor: 'pointer'
+                }}
+              >
+                Xóa
+              </button>
+              <button
+                onClick={handleCloseDeleteModal}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  border: '2px solid #ddd',
+                  borderRadius: '8px',
+                  fontSize: '1em',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  background: 'white',
+                  color: '#333'
+                }}
+              >
+                Hủy
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Streak Milestone Modal */}
+      {showStreakModal && (
+        <div className="modal-overlay" onClick={handleCloseStreakModal}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Thêm/Chỉnh sửa Streak Milestone</h3>
+              <button className="modal-close" onClick={handleCloseStreakModal}>×</button>
+            </div>
+            <form onSubmit={handleSubmitStreak} className="modal-form">
+              <div className="form-group">
+                <label>Số ngày Streak *</label>
+                <input
+                  type="number"
+                  value={streakForm.streak}
+                  onChange={(e) => setStreakForm({ ...streakForm, streak: e.target.value })}
+                  placeholder="Ví dụ: 50, 100"
+                  min="1"
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label>Màu sắc linh vật *</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                  <input
+                    type="color"
+                    value={streakForm.color}
+                    onChange={(e) => setStreakForm({ ...streakForm, color: e.target.value })}
+                    style={{ width: '60px', height: '45px', cursor: 'pointer', border: '2px solid #ddd', borderRadius: '8px' }}
+                  />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ 
+                      padding: '10px 15px', 
+                      backgroundColor: streakForm.color, 
+                      borderRadius: '8px',
+                      color: '#fff',
+                      textAlign: 'center',
+                      fontWeight: '600',
+                      textShadow: '1px 1px 2px rgba(0,0,0,0.3)'
+                    }}>
+                      Màu này sẽ hiển thị trong giao diện user
+                    </div>
+                    <p style={{ fontSize: '0.85em', color: '#666', marginTop: '5px', marginBottom: 0 }}>
+                      Màu sắc sẽ được dùng để tô điểm cho linh vật và background
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="form-group emoji-picker-container" style={{ position: 'relative' }}>
+                <label>Emoji linh vật *</label>
+                <div 
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    padding: '10px',
+                    border: '2px solid #ddd',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    backgroundColor: '#f9f9f9',
+                    minHeight: '45px',
+                    transition: 'all 0.2s'
+                  }}
+                  onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                  onMouseEnter={(e) => e.target.style.borderColor = '#4a7c2a'}
+                  onMouseLeave={(e) => e.target.style.borderColor = '#ddd'}
+                >
+                  <span style={{ fontSize: '2em' }}>{streakForm.emoji || '🌱'}</span>
+                  <span style={{ color: '#666', flex: 1 }}>Nhấn để chọn emoji</span>
+                  <span style={{ color: '#999', transform: showEmojiPicker ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>▼</span>
+                </div>
+                
+                {showEmojiPicker && (
+                  <div 
+                    className="emoji-picker-dropdown"
+                    style={{
+                      position: 'absolute',
+                      top: '100%',
+                      left: 0,
+                      right: 0,
+                      marginTop: '5px',
+                      backgroundColor: 'white',
+                      border: '2px solid #4a7c2a',
+                      borderRadius: '8px',
+                      padding: '15px',
+                      zIndex: 1000,
+                      maxHeight: '300px',
+                      overflowY: 'auto',
+                      boxShadow: '0 4px 15px rgba(0,0,0,0.2)'
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div style={{ 
+                      fontSize: '0.9em',
+                      color: '#666',
+                      marginBottom: '10px',
+                      fontWeight: '600'
+                    }}>
+                      Chọn emoji linh vật:
+                    </div>
+                    <div style={{ 
+                      display: 'grid', 
+                      gridTemplateColumns: 'repeat(8, 1fr)', 
+                      gap: '8px',
+                      marginBottom: '15px'
+                    }}>
+                      {mascotEmojis.map((emoji, index) => (
+                        <button
+                          key={index}
+                          type="button"
+                          onClick={() => {
+                            setStreakForm({ ...streakForm, emoji });
+                            setShowEmojiPicker(false);
+                          }}
+                          style={{
+                            fontSize: '2em',
+                            padding: '8px',
+                            border: streakForm.emoji === emoji ? '3px solid #4a7c2a' : '2px solid #ddd',
+                            borderRadius: '8px',
+                            cursor: 'pointer',
+                            backgroundColor: streakForm.emoji === emoji ? '#e8f5e9' : 'white',
+                            transition: 'all 0.2s',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}
+                          onMouseEnter={(e) => {
+                            if (streakForm.emoji !== emoji) {
+                              e.target.style.backgroundColor = '#f0f0f0';
+                              e.target.style.borderColor = '#4a7c2a';
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (streakForm.emoji !== emoji) {
+                              e.target.style.backgroundColor = 'white';
+                              e.target.style.borderColor = '#ddd';
+                            }
+                          }}
+                        >
+                          {emoji}
+                        </button>
+                      ))}
+                    </div>
+                    <div style={{ 
+                      padding: '10px', 
+                      borderTop: '1px solid #eee', 
+                      marginTop: '10px',
+                      fontSize: '0.9em',
+                      color: '#666',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px'
+                    }}>
+                      <span>Hoặc nhập emoji tùy chỉnh:</span>
+                      <input
+                        type="text"
+                        value={streakForm.emoji}
+                        onChange={(e) => setStreakForm({ ...streakForm, emoji: e.target.value })}
+                        placeholder="🌱"
+                        style={{
+                          padding: '5px 10px',
+                          border: '1px solid #ddd',
+                          borderRadius: '4px',
+                          width: '100px',
+                          fontSize: '1.2em'
+                        }}
+                        maxLength={2}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div className="form-group">
+                <label>Tên linh vật *</label>
+                <input
+                  type="text"
+                  value={streakForm.name}
+                  onChange={(e) => setStreakForm({ ...streakForm, name: e.target.value })}
+                  placeholder="Ví dụ: Linh vật vàng"
+                  required
+                />
+              </div>
+              <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+                <button type="submit" className="submit-btn" style={{ flex: 1 }}>
+                  Cập nhật
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCloseStreakModal}
+                  style={{
+                    flex: 1,
+                    padding: '15px',
+                    border: '2px solid #ddd',
+                    borderRadius: '10px',
+                    fontSize: '1.1em',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    background: 'white',
+                    color: '#333'
+                  }}
+                >
+                  Hủy
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Streak Modal */}
+      {showDeleteStreakModal && streakToDelete && (
+        <div className="modal-overlay" onClick={handleCloseDeleteStreakModal}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '400px' }}>
+            <div className="modal-header">
+              <h3>Xác nhận xóa Milestone</h3>
+              <button className="modal-close" onClick={handleCloseDeleteStreakModal}>×</button>
+            </div>
+            <div className="modal-body">
+              <p>Bạn có chắc chắn muốn xóa milestone <strong>Streak {streakToDelete}</strong>?</p>
+              <p style={{ color: '#dc3545', fontSize: '0.9em', marginTop: '10px' }}>
+                ⚠️ Hành động này không thể hoàn tác.
+              </p>
+            </div>
+            <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+              <button
+                onClick={handleConfirmDeleteStreak}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  backgroundColor: '#dc3545',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '1em',
+                  fontWeight: '600',
+                  cursor: 'pointer'
+                }}
+              >
+                Xóa
+              </button>
+              <button
+                onClick={handleCloseDeleteStreakModal}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  border: '2px solid #ddd',
+                  borderRadius: '8px',
+                  fontSize: '1em',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  background: 'white',
+                  color: '#333'
+                }}
+              >
+                Hủy
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Action Reward Modal */}
+      {showActionModal && (
+        <div className="modal-overlay" onClick={handleCloseActionModal}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>
+                {isEditingDefault 
+                  ? 'Chỉnh sửa Phần thưởng Mặc định' 
+                  : (actionForm.tag && config.actionRewards?.tags?.[actionForm.tag] 
+                    ? `Chỉnh sửa Action Reward: ${actionForm.tag}` 
+                    : 'Thêm Action Reward mới')}
+              </h3>
+              <button className="modal-close" onClick={handleCloseActionModal}>×</button>
+            </div>
+            <form onSubmit={handleSubmitAction} className="modal-form">
+              {isEditingDefault ? (
+                <div className="form-group">
+                  <label>Phần thưởng mặc định</label>
+                  <input
+                    type="text"
+                    value="Mặc định (áp dụng cho tất cả các tag không có cấu hình riêng)"
+                    disabled
+                    style={{ background: '#f5f5f5', color: '#666' }}
+                  />
+                </div>
+              ) : actionForm.tag && config.actionRewards?.tags?.[actionForm.tag] ? (
+                <div className="form-group">
+                  <label>Tag hành động</label>
+                  <input
+                    type="text"
+                    value={actionForm.tag}
+                    disabled
+                    style={{ background: '#f5f5f5' }}
+                  />
+                </div>
+              ) : (
+                <div className="form-group">
+                  <label>Tag hành động *</label>
+                  <input
+                    type="text"
+                    value={actionForm.tag}
+                    onChange={(e) => setActionForm({ ...actionForm, tag: e.target.value })}
+                    placeholder="Ví dụ: xe-dap, trong-cay, mang-coc"
+                    required
+                  />
+                </div>
+              )}
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Streak</label>
+                  <input
+                    type="number"
+                    value={actionForm.streak}
+                    onChange={(e) => setActionForm({ ...actionForm, streak: e.target.value })}
+                    min="0"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Eco Tokens</label>
+                  <input
+                    type="number"
+                    value={actionForm.ecoTokens}
+                    onChange={(e) => setActionForm({ ...actionForm, ecoTokens: e.target.value })}
+                    min="0"
+                  />
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+                <button type="submit" className="submit-btn" style={{ flex: 1 }}>
+                  {isEditingDefault ? 'Cập nhật Mặc định' : (actionForm.tag && config.actionRewards?.tags?.[actionForm.tag] ? 'Cập nhật' : 'Thêm mới')}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCloseActionModal}
+                  style={{
+                    flex: 1,
+                    padding: '15px',
+                    border: '2px solid #ddd',
+                    borderRadius: '10px',
+                    fontSize: '1.1em',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    background: 'white',
+                    color: '#333'
+                  }}
+                >
+                  Hủy
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Action Modal */}
+      {showDeleteActionModal && actionToDelete && (
+        <div className="modal-overlay" onClick={handleCloseDeleteActionModal}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '400px' }}>
+            <div className="modal-header">
+              <h3>Xác nhận xóa Action Reward</h3>
+              <button className="modal-close" onClick={handleCloseDeleteActionModal}>×</button>
+            </div>
+            <div className="modal-body">
+              <p>Bạn có chắc chắn muốn xóa action reward cho tag <strong>"{actionToDelete}"</strong>?</p>
+              <p style={{ color: '#dc3545', fontSize: '0.9em', marginTop: '10px' }}>
+                ⚠️ Hành động này không thể hoàn tác.
+              </p>
+            </div>
+            <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+              <button
+                onClick={handleConfirmDeleteAction}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  backgroundColor: '#dc3545',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '1em',
+                  fontWeight: '600',
+                  cursor: 'pointer'
+                }}
+              >
+                Xóa
+              </button>
+              <button
+                onClick={handleCloseDeleteActionModal}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  border: '2px solid #ddd',
+                  borderRadius: '8px',
+                  fontSize: '1em',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  background: 'white',
+                  color: '#333'
+                }}
+              >
+                Hủy
+              </button>
             </div>
           </div>
         </div>

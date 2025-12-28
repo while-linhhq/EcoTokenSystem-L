@@ -38,6 +38,10 @@ namespace EcoTokenSystem.Domain.Entities
         public ICollection<Post> PostsApproved { get; set; } = new List<Post>();
 
         //// Quan hệ 1-N: User (Admin) tạo nhiều giao dịch điểm
-        public ICollection<PointHistory> TransactionsMade { get; set; } = new List<PointHistory>(); 
+        public ICollection<PointHistory> TransactionsMade { get; set; } = new List<PointHistory>();
+
+        // Like and Comment relationships
+        public ICollection<Like> Likes { get; set; } = new List<Like>();
+        public ICollection<Comment> Comments { get; set; } = new List<Comment>();
     }
 }

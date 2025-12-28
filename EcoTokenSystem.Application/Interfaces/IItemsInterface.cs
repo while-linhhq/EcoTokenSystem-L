@@ -18,5 +18,7 @@ namespace EcoTokenSystem.Application.Interfaces
         Task<ResponseDTO> DeleteItemAsync(Guid itemId);
 
         Task<ResponseDTO> UpdateItemAsync(Guid itemId,UpdateItemRequestDTO request);
+
+        Task<ResponseDTO<List<ItemsHistoryDTO>>> GetItemsHistoryAsync(Guid userId);
     }
 }

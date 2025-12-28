@@ -8,6 +8,7 @@ namespace EcoTokenSystem.Application.DTOs
 {
     public class PostsDTO
     {
+        public Guid Id { get; set; } // Thêm Id để frontend có thể identify post
         public string Title { get; set; } = string.Empty;
         public string Content { get; set; } = string.Empty;
         public string? ImageUrl { get; set; }
@@ -20,5 +21,15 @@ namespace EcoTokenSystem.Application.DTOs
         public DateTime SubmittedAt { get; set; } = DateTime.UtcNow;
         public DateTime? ApprovedRejectedAt { get; set; }
         public string? RejectionReason { get; set; }
+        
+        // Thông tin User (cho Moderator/Admin xem)
+        public string UserName { get; set; } = string.Empty;
+        public string UserAvatar { get; set; } = string.Empty;
+        public string? UserAvatarImage { get; set; }
+
+        // Like and Comment information
+        public int LikesCount { get; set; } = 0;
+        public List<CommentDTO> Comments { get; set; } = new List<CommentDTO>();
+        public bool IsLikedByCurrentUser { get; set; } = false;
     }
 }

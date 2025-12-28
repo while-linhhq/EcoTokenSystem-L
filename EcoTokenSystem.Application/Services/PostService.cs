@@ -5,6 +5,7 @@ using EcoTokenSystem.Infrastructure.Data;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http; // Cần IFormFile
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -17,14 +18,18 @@ namespace EcoTokenSystem.Application.Services
     {
         private readonly ApplicationDbContext _context;
         private readonly IWebHostEnvironment _webHostEnvironment;
+        private readonly ILogger<PostService> _logger;
         // Giữ nguyên hằng số Max File Size
         private const long MaxFileSize = 5 * 1024 * 1024;
         private const int ApprovedStatusId = 2; // Dùng hằng số để dễ bảo trì
+        private const int PendingStatusId = 1; // Pending status
+        private const int RejectedStatusId = 3; // Rejected status
 
-        public PostService(ApplicationDbContext context, IWebHostEnvironment webHostEnvironment)
+        public PostService(ApplicationDbContext context, IWebHostEnvironment webHostEnvironment, ILogger<PostService> logger)
         {
             _context = context;
             _webHostEnvironment = webHostEnvironment;
+            _logger = logger;
         }
 
         // --- HÀM PRIVATE: XỬ LÝ FILE UPLOAD ---
@@ -58,35 +63,100 @@ namespace EcoTokenSystem.Application.Services
         // Sửa: Lấy UserId từ tham số
         public async Task<ResponseDTO> CreatePostAsync(Guid userId, PostCreateRequestDTO request)
         {
+            _logger.LogInformation($"[CreatePostAsync] Bắt đầu tạo post cho userId: {userId}, Title: {request.Title?.Substring(0, Math.Min(50, request.Title?.Length ?? 0))}");
+
+            // Validate input
+            if (string.IsNullOrWhiteSpace(request.Title))
+            {
+                _logger.LogWarning("[CreatePostAsync] Title rỗng");
+                return new ResponseDTO { IsSuccess = false, Message = "Tiêu đề không được để trống." };
+            }
+
+            if (string.IsNullOrWhiteSpace(request.Content))
+            {
+                _logger.LogWarning("[CreatePostAsync] Content rỗng");
+                return new ResponseDTO { IsSuccess = false, Message = "Nội dung không được để trống." };
+            }
+
             string? imageUrl = null;
             if (request.ImageFile != null)
             {
                 try
                 {
+                    _logger.LogInformation($"[CreatePostAsync] Đang upload image, size: {request.ImageFile.Length} bytes");
                     imageUrl = await SaveNewImageAsync(request.ImageFile);
+                    _logger.LogInformation($"[CreatePostAsync] Upload image thành công: {imageUrl}");
                 }
                 catch (InvalidOperationException ex)
                 {
-                    // Bắt lỗi kích thước file từ hàm private
+                    _logger.LogError(ex, "[CreatePostAsync] Lỗi upload image");
                     return new ResponseDTO { IsSuccess = false, Message = ex.Message };
                 }
             }
 
+            // Tạo post với StatusId = 1 (Pending) - BẮT BUỘC
             var newPost = new Post
             {
                 Id = Guid.NewGuid(),
-                Title = request.Title,
-                Content = request.Content,
+                Title = request.Title.Trim(),
+                Content = request.Content.Trim(),
                 ImageUrl = imageUrl,
                 UserId = userId, // Dùng UserId từ Token
-                StatusId = 1, // 1: Pending
-                SubmittedAt = DateTime.UtcNow
+                StatusId = PendingStatusId, // 1: Pending - BẮT BUỘC phải là Pending để moderator duyệt
+                SubmittedAt = DateTime.UtcNow,
+                AwardedPoints = 0, // Chưa có điểm vì chưa được duyệt
+                AdminId = null, // Chưa có admin duyệt
+                ApprovedRejectedAt = null, // Chưa được xử lý
+                RejectionReason = null // Chưa bị từ chối
             };
 
-            await _context.Posts.AddAsync(newPost);
-            await _context.SaveChangesAsync();
+            _logger.LogInformation($"[CreatePostAsync] Tạo post object với StatusId = {newPost.StatusId} (Pending), PostId: {newPost.Id}");
 
-            return new ResponseDTO { IsSuccess = true, Message = "Bài đăng đã được gửi chờ duyệt." };
+            try
+            {
+                await _context.Posts.AddAsync(newPost);
+                await _context.SaveChangesAsync();
+                _logger.LogInformation($"[CreatePostAsync] Đã save post vào database, PostId: {newPost.Id}");
+
+                // Verify post was created with correct status
+                var savedPost = await _context.Posts
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(p => p.Id == newPost.Id);
+
+                if (savedPost == null)
+                {
+                    _logger.LogError($"[CreatePostAsync] Không tìm thấy post sau khi save, PostId: {newPost.Id}");
+                    return new ResponseDTO { IsSuccess = false, Message = "Lỗi: Không thể tìm thấy post sau khi tạo." };
+                }
+
+                _logger.LogInformation($"[CreatePostAsync] Post đã được lưu với StatusId = {savedPost.StatusId}, PostId: {savedPost.Id}");
+
+                if (savedPost.StatusId != PendingStatusId)
+                {
+                    _logger.LogError($"[CreatePostAsync] LỖI: Post được tạo với StatusId = {savedPost.StatusId} thay vì {PendingStatusId} (Pending). PostId: {savedPost.Id}");
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = $"Lỗi: Post được tạo với StatusId = {savedPost.StatusId} thay vì {PendingStatusId} (Pending). PostId: {savedPost.Id}"
+                    };
+                }
+
+                _logger.LogInformation($"[CreatePostAsync] ✅ Post được tạo thành công với StatusId = {PendingStatusId} (Pending), PostId: {savedPost.Id}");
+                return new ResponseDTO
+                {
+                    IsSuccess = true,
+                    Message = "Bài đăng đã được gửi chờ duyệt."
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"[CreatePostAsync] Exception khi tạo post: {ex.Message}");
+                return new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = $"Lỗi khi tạo bài đăng: {ex.Message}"
+                };
+            }
         }
 
         // --- 2. DUYỆT/TỪ CHỐI BÀI ĐĂNG (ApproveRejectPost) ---
@@ -119,15 +189,20 @@ namespace EcoTokenSystem.Application.Services
 
             if (request.StatusId == ApprovedStatusId) // APPROVE (2)
             {
-                if (request.awardedPoints <= 0)
+                _logger.LogInformation($"[ApproveRejectPostAsync] Approving post {postId}, AwardedPoints: {request.AwardedPoints}");
+                
+                if (request.AwardedPoints <= 0)
                 {
+                    _logger.LogWarning($"[ApproveRejectPostAsync] AwardedPoints <= 0: {request.AwardedPoints}");
                     return new ResponseDTO { IsSuccess = false, Message = "Điểm thưởng phải lớn hơn 0 khi duyệt bài." };
                 }
 
-                postDomain.AwardedPoints = request.awardedPoints;
+                postDomain.AwardedPoints = request.AwardedPoints;
 
                 // A. CẬP NHẬT ĐIỂM
-                authorDomain.CurrentPoints += request.awardedPoints;
+                var oldPoints = authorDomain.CurrentPoints;
+                authorDomain.CurrentPoints += request.AwardedPoints;
+                _logger.LogInformation($"[ApproveRejectPostAsync] Updating user {authorDomain.Id} points: {oldPoints} + {request.AwardedPoints} = {authorDomain.CurrentPoints}");
                 _context.Users.Update(authorDomain);
 
                 // B. GHI LỊCH SỬ ĐIỂM
@@ -137,10 +212,11 @@ namespace EcoTokenSystem.Application.Services
                     UserId = authorDomain.Id,
                     AdminId = adminId, // Dùng AdminId từ tham số
                     PostId = postDomain.Id,
-                    PointsChange = request.awardedPoints,
+                    PointsChange = request.AwardedPoints,
                     TransactionDate = DateTime.UtcNow
                 };
                 await _context.PointHistories.AddAsync(pointHistory);
+                _logger.LogInformation($"[ApproveRejectPostAsync] Added PointHistory: {pointHistory.Id}, PointsChange: {pointHistory.PointsChange}");
 
                 // C. XỬ LÝ LOGIC STREAK
                 await UpdateUserStreakAsync(authorDomain); // Bỏ qua SubmittedAt, dùng ApprovedAt/UtcNow
@@ -208,45 +284,81 @@ namespace EcoTokenSystem.Application.Services
 
         // --- 4. XEM BÀI ĐĂNG CÓ ĐIỀU KIỆN (GetPostsAsync) ---
         // Giữ nguyên logic IQueryable linh hoạt
-        public async Task<ResponseDTO<List<PostsDTO>>> GetPostsAsync(Guid userId, int? statusId)
+        // Nếu userId = Guid.Empty: Lấy tất cả posts (public posts)
+        // Nếu userId != Guid.Empty: Lấy posts của user đó
+        public async Task<ResponseDTO<List<PostsDTO>>> GetPostsAsync(Guid userId, int? statusId, Guid? currentUserId = null)
         {
-            var postsQuery = _context.Posts.Where(post => post.UserId.Equals(userId)).AsQueryable();
-            //var postsQuery = _context.Posts.AsQueryable();
+            IQueryable<Post> postsQuery;
+
+            // Nếu userId = Guid.Empty, lấy tất cả posts (public)
+            if (userId == Guid.Empty)
+            {
+                postsQuery = _context.Posts.AsQueryable();
+            }
+            else
+            {
+                postsQuery = _context.Posts.Where(post => post.UserId.Equals(userId)).AsQueryable();
+            }
+
             if (statusId.HasValue)
             {
                 postsQuery = postsQuery.Where(post => post.StatusId.Equals(statusId.Value));
             }
 
-            var postsDomain = await postsQuery.ToListAsync();
+            var postsDomain = await postsQuery
+                .Include(p => p.User) // Include User để lấy thông tin user
+                .Include(p => p.Likes) // Include Likes
+                .Include(p => p.Comments) // Include Comments
+                    .ThenInclude(c => c.User) // Include User for each Comment
+                .OrderByDescending(p => p.ApprovedRejectedAt ?? p.SubmittedAt) // Sắp xếp mới nhất trước
+                .ToListAsync();
 
-            if (!postsDomain.Any())
-            {
-                return new ResponseDTO<List<PostsDTO>>
-                {
-                    IsSuccess = false,
-                    Message = "Không có bài đăng nào phù hợp.",
-                    Data = new List<PostsDTO>()
-                };
-            }
+            // Get all post IDs to check likes in one query (chỉ khi có posts)
+            var postIds = postsDomain.Select(p => p.Id).ToList();
+            var userLikes = currentUserId.HasValue && postIds.Any()
+                ? await _context.Likes
+                    .Where(l => l.UserId == currentUserId.Value && postIds.Contains(l.PostId))
+                    .Select(l => l.PostId)
+                    .ToListAsync()
+                : new List<Guid>();
 
             var postsDtoList = postsDomain.Select(post => new PostsDTO
             {
+                Id = post.Id, // Thêm Id
                 Title = post.Title,
                 Content = post.Content,
                 ImageUrl = post.ImageUrl,
-                UserId = userId,
+                UserId = post.UserId, // Dùng post.UserId thay vì userId parameter
                 StatusId = post.StatusId,
                 AdminId = post.AdminId,
                 AwardedPoints = post.AwardedPoints,
                 SubmittedAt = post.SubmittedAt,
                 ApprovedRejectedAt = post.ApprovedRejectedAt,
-                RejectionReason = post.RejectionReason
+                RejectionReason = post.RejectionReason,
+                // Thêm thông tin User nếu có
+                UserName = post.User?.Name ?? string.Empty,
+                UserAvatar = string.Empty, // User entity không có Avatar property
+                UserAvatarImage = null, // User entity không có AvatarImage property
+                // Like and Comment information
+                LikesCount = post.Likes?.Count ?? 0,
+                Comments = post.Comments?.Select(c => new CommentDTO
+                {
+                    Id = c.Id,
+                    PostId = c.PostId,
+                    UserId = c.UserId,
+                    UserName = c.User?.Name ?? "Người dùng",
+                    Content = c.Content,
+                    CreatedAt = c.CreatedAt
+                }).ToList() ?? new List<CommentDTO>(),
+                IsLikedByCurrentUser = currentUserId.HasValue && userLikes.Contains(post.Id)
             }).ToList();
 
             return new ResponseDTO<List<PostsDTO>>
             {
                 IsSuccess = true,
-                Message = "Lấy danh sách bài đăng thành công.",
+                Message = postsDtoList.Any() 
+                    ? "Lấy danh sách bài đăng thành công." 
+                    : "Không có bài đăng nào phù hợp.",
                 Data = postsDtoList
             };
         }

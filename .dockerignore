@@ -1,0 +1,72 @@
+# ============================================
+# .DOCKERIGNORE - HƯỚNG DẪN CHO NGƯỜI MỚI HỌC
+# ============================================
+# File này giống như .gitignore
+# Nó bảo Docker: "Đừng copy những file này vào container"
+# Tại sao? → Giảm kích thước, tăng tốc độ build
+
+# ============================================
+# CÁC FILE/FOLDER CẦN BỎ QUA:
+# ============================================
+
+# 1. Git files (không cần thiết trong container)
+**/.git
+**/.gitignore
+**/.gitattributes
+
+# 2. IDE files (Visual Studio, VS Code, v.v.)
+**/.vs
+**/.vscode
+**/.idea
+**/*.user
+**/*.suo
+**/*.userosscache
+**/*.sln.docstates
+
+# 3. Build output (sẽ được build lại trong container)
+**/bin
+**/obj
+**/out
+**/publish
+
+# 4. Node modules (nếu có frontend trong cùng repo)
+**/node_modules
+**/npm-debug.log
+**/yarn-error.log
+
+# 5. Docker files (không cần copy vào chính nó)
+**/.dockerignore
+**/Dockerfile*
+**/docker-compose*.yml
+**/docker-compose*.yaml
+
+# 6. Documentation (không cần trong container)
+**/README.md
+**/*.md
+
+# 7. Test files (không cần trong production)
+**/test
+**/tests
+**/*.Tests
+**/*.Test
+
+# 8. Temporary files
+**/.tmp
+**/.temp
+**/*.tmp
+**/*.log
+
+# 9. OS files
+**/.DS_Store
+**/Thumbs.db
+
+# 10. Environment files (sẽ dùng environment variables)
+**/.env
+**/.env.local
+**/.env.*.local
+
+# 11. Secrets (KHÔNG BAO GIỜ copy secrets vào container!)
+**/secrets
+**/*.secret
+**/*.key
+

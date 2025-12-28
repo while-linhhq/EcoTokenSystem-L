@@ -14,6 +14,7 @@ import Moderator from './pages/Moderator';
 import GiftHistory from './pages/GiftHistory';
 import ActionHistory from './pages/ActionHistory';
 import Admin from './pages/Admin';
+import Leaderboard from './pages/Leaderboard';
 import './App.css';
 
 // Protected Route component
@@ -152,6 +153,16 @@ function App() {
                       <ProtectedRoute>
                         <Layout>
                           <ActionHistory />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/leaderboard"
+                    element={
+                      <ProtectedRoute>
+                        <Layout>
+                          <Leaderboard />
                         </Layout>
                       </ProtectedRoute>
                     }

@@ -18,5 +18,11 @@ namespace EcoTokenSystem.Application.Interfaces
         public Task<ResponseDTO> UpdateProfileAsync(UpdateProfileRequestDTO request, Guid Id);
 
         public Task<ResponseDTO<List<PostsDTO>>> UserPostsAsync(Guid userId,int? statusId);
+
+        // Admin operations
+        public Task<ResponseDTO<List<UserListDTO>>> GetAllUsersAsync();
+        public Task<ResponseDTO> AdminUpdateUserAsync(Guid userId, AdminUpdateUserDTO request);
+        public Task<ResponseDTO> AdminCreateUserAsync(RegisterRequestDTO request, int roleId = 1);
+        public Task<ResponseDTO> AdminDeleteUserAsync(Guid userId);
     }
 }

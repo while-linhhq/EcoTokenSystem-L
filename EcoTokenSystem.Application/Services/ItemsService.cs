@@ -28,30 +28,40 @@ namespace EcoTokenSystem.Application.Services
 
         public async  Task<ResponseDTO<List<ItemsDTO>>> ItemsAsync()
         {
-            var itemsDomain = await dbContext.Items.ToListAsync();
-            if (itemsDomain.Count==0)
+            try
             {
+                var itemsDomain = await dbContext.Items.ToListAsync();
+                
+                // Luôn trả về IsSuccess = true, kể cả khi không có items
+                // Frontend sẽ xử lý empty array
+                var itemsDtoList = itemsDomain.Select(item => new ItemsDTO
+                {
+                    Id = item.Id,
+                    Name = item.Name,
+                    ImageUrl = item.ImageUrl,
+                    RequiredPoints = item.RequiredPoints,
+                    // Xử lý Tag có thể null (nếu migration chưa chạy)
+                    Tag = item.Tag ?? "handmade"
+                }).ToList();
+
+                return new ResponseDTO<List<ItemsDTO>>()  
+                {
+                    IsSuccess = true,
+                    Message = itemsDtoList.Count > 0 ? "Danh sách sản phẩm đổi quà" : "Không có sản phẩm nào",
+                    Data = itemsDtoList  
+                };
+            }
+            catch (Exception ex)
+            {
+                // Nếu có lỗi (ví dụ: column Tag chưa tồn tại), trả về empty list
+                // Log lỗi để debug
                 return new ResponseDTO<List<ItemsDTO>>()
                 {
                     IsSuccess = false,
-                    Message = "Không có sản phẩm nào",
+                    Message = $"Lỗi khi lấy danh sách sản phẩm: {ex.Message}",
                     Data = new List<ItemsDTO>()
                 };
             }
-            var itemsDtoList = itemsDomain.Select(item => new ItemsDTO
-            {
-                Id = item.Id,
-                Name = item.Name,
-                ImageUrl = item.ImageUrl,
-                RequiredPoints = item.RequiredPoints
-            }).ToList();
-
-            return new ResponseDTO<List<ItemsDTO>>()  
-            {
-                IsSuccess = true,
-                Message = "Danh sách sản phẩm đổi quà",
-                Data = itemsDtoList  
-            };
         }
 
         public async Task<ResponseDTO> ChangeItemsAsync(Guid userId, Guid itemId)
@@ -134,7 +144,8 @@ namespace EcoTokenSystem.Application.Services
                 Id = Guid.NewGuid(),
                 Name = request.Name,
                 ImageUrl = imageUrl,
-                RequiredPoints = request.RequiredPoints
+                RequiredPoints = request.RequiredPoints,
+                Tag = request.Tag ?? "handmade"
             };
 
             // 4. Lưu vào Database
@@ -210,6 +221,7 @@ namespace EcoTokenSystem.Application.Services
             // 3. Cập nhật các thuộc tính (Vì DTO có [Required], ta gán thẳng)
             itemDomain.Name = request.Name;
             itemDomain.RequiredPoints = request.RequiredPoints;
+            itemDomain.Tag = request.Tag ?? itemDomain.Tag ?? "handmade";
 
             // Cập nhật ImageUrl (sẽ là URL mới hoặc NULL nếu người dùng xóa ảnh)
             itemDomain.ImageUrl = imageUrl;
@@ -262,6 +274,47 @@ namespace EcoTokenSystem.Application.Services
             if (System.IO.File.Exists(filePathToDelete))
             {
                 System.IO.File.Delete(filePathToDelete);
+            }
+        }
+
+        public async Task<ResponseDTO<List<ItemsHistoryDTO>>> GetItemsHistoryAsync(Guid userId)
+        {
+            try
+            {
+                var itemsHistory = await dbContext.ItemsHistory
+                    .Include(ih => ih.Item)
+                    .Include(ih => ih.User)
+                    .Where(ih => ih.UserId == userId)
+                    .OrderByDescending(ih => ih.RedemptionDate)
+                    .ToListAsync();
+
+                var itemsHistoryDtoList = itemsHistory.Select(ih => new ItemsHistoryDTO
+                {
+                    Id = ih.Id,
+                    UserId = ih.UserId,
+                    ItemId = ih.ItemId,
+                    RedemptionDate = ih.RedemptionDate,
+                    ItemName = ih.Item?.Name ?? string.Empty,
+                    ItemImageUrl = ih.Item?.ImageUrl ?? string.Empty,
+                    ItemRequiredPoints = ih.Item?.RequiredPoints ?? 0,
+                    UserName = ih.User?.Name ?? ih.User?.Username ?? string.Empty
+                }).ToList();
+
+                return new ResponseDTO<List<ItemsHistoryDTO>>
+                {
+                    IsSuccess = true,
+                    Message = itemsHistoryDtoList.Count > 0 ? "Lịch sử đổi quà" : "Chưa có lịch sử đổi quà nào",
+                    Data = itemsHistoryDtoList
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO<List<ItemsHistoryDTO>>
+                {
+                    IsSuccess = false,
+                    Message = $"Lỗi khi lấy lịch sử đổi quà: {ex.Message}",
+                    Data = new List<ItemsHistoryDTO>()
+                };
             }
         }
     }

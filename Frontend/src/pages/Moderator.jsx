@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useActions } from '../context/ActionsContext';
 import { useConfig } from '../context/ConfigContext';
@@ -6,17 +6,56 @@ import './Moderator.css';
 
 const Moderator = () => {
   const { user } = useAuth();
-  const { getPendingActions, approveAction, rejectAction, getApprovedActions, getRejectedActions } = useActions();
+  const { getPendingActions, approveAction, rejectAction, getApprovedActions, getRejectedActions, loadActions } = useActions();
   const { getActionReward } = useConfig();
   const [activeTab, setActiveTab] = useState('pending'); // 'pending', 'approved', 'rejected'
   const [comment, setComment] = useState('');
+
+  // Reload actions khi component mount hoặc khi tab thay đổi
+  // Loại bỏ loadActions khỏi dependencies để tránh infinite loop
+  useEffect(() => {
+    const userRole = user?.role || user?.roleName || '';
+    const userRoleName = user?.roleName || user?.role || '';
+    const isModeratorOrAdmin = 
+      userRole === 'Moderator' || userRole === 'moderator' || 
+      userRole === 'Admin' || userRole === 'admin' ||
+      userRoleName === 'Moderator' || userRoleName === 'moderator' ||
+      userRoleName === 'Admin' || userRoleName === 'admin';
+    
+    console.log('[Moderator] Checking role:', {
+      'user.role': user?.role,
+      'user.roleName': user?.roleName,
+      userRole,
+      userRoleName,
+      isModeratorOrAdmin
+    });
+    
+    if (user && isModeratorOrAdmin) {
+      console.log('[Moderator] Loading actions for Moderator/Admin...');
+      loadActions();
+    } else {
+      console.warn('[Moderator] User is not Moderator/Admin, skipping loadActions');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, activeTab, user?.role, user?.roleName]); // Thêm user.role và user.roleName vào dependencies
 
   const pendingActions = getPendingActions();
   const approvedActions = getApprovedActions();
   const rejectedActions = getRejectedActions();
 
+  // Debug logging
+  useEffect(() => {
+    console.log('[Moderator] Current state:', {
+      pendingActions: pendingActions.length,
+      approvedActions: approvedActions.length,
+      rejectedActions: rejectedActions.length,
+      activeTab,
+      userRole: user?.role || user?.roleName
+    });
+  }, [pendingActions, approvedActions, rejectedActions, activeTab, user]);
+
   const handleApprove = async (action) => {
-    if (window.confirm(`Xác nhận duyệt hành động từ ${action.userName}?`)) {
+    if (window.confirm(`Xác nhận duyệt bài viết "${action.title || 'Hành động xanh'}" từ ${action.userName || 'Người dùng'}?`)) {
       // Get reward based on tag or use default
       const tag = action.tag || 'default';
       const reward = getActionReward(tag);
@@ -25,7 +64,8 @@ const Moderator = () => {
       
       if (result.success) {
         setComment('');
-        alert(`Đã duyệt hành động! Người dùng sẽ nhận +${reward.streak} streak và +${reward.ecoTokens} Eco Tokens.`);
+        alert(`Đã duyệt bài viết! Người dùng sẽ nhận +${reward.streak} streak và +${reward.ecoTokens} Eco Tokens.`);
+        // ActionsContext sẽ tự động reload sau khi approve
       } else {
         alert(result.message || 'Có lỗi xảy ra khi duyệt hành động');
       }
@@ -37,12 +77,13 @@ const Moderator = () => {
       alert('Vui lòng nhập lý do từ chối để nhắc nhở người dùng.');
       return;
     }
-    if (window.confirm(`Từ chối hành động từ ${action.userName}?`)) {
+    if (window.confirm(`Từ chối bài viết "${action.title || 'Hành động xanh'}" từ ${action.userName || 'Người dùng'}?`)) {
       const result = await rejectAction(action.id, comment);
       
       if (result.success) {
         setComment('');
-        alert('Đã từ chối hành động. Người dùng sẽ nhận được thông báo nhắc nhở.');
+        alert('Đã từ chối bài viết. Người dùng sẽ nhận được thông báo nhắc nhở.');
+        // ActionsContext sẽ tự động reload sau khi reject
       } else {
         alert(result.message || 'Có lỗi xảy ra khi từ chối hành động');
       }
@@ -76,16 +117,45 @@ const Moderator = () => {
       </div>
 
       <div className="action-image">
-        {action.imagePreview ? (
-          <img src={action.imagePreview} alt="Hành động xanh" />
+        {action.imageUrl && action.imageUrl.trim() !== '' ? (
+          <img 
+            src={action.imageUrl} 
+            alt={action.title || 'Hành động xanh'}
+            onError={(e) => {
+              console.error('[Moderator] Image load error:', {
+                src: e.target.src,
+                imageUrl: action.imageUrl,
+                actionId: action.id,
+                actionTitle: action.title
+              });
+              // Ẩn ảnh và hiển thị placeholder
+              e.target.style.display = 'none';
+              const placeholder = e.target.nextElementSibling;
+              if (!placeholder || !placeholder.classList.contains('image-placeholder')) {
+                const placeholderDiv = document.createElement('div');
+                placeholderDiv.className = 'image-placeholder';
+                placeholderDiv.textContent = action.imageEmoji || '📷';
+                e.target.parentNode.appendChild(placeholderDiv);
+              }
+            }}
+            onLoad={() => {
+              console.log('[Moderator] Image loaded successfully:', action.imageUrl);
+            }}
+          />
         ) : (
           <div className="image-placeholder">{action.imageEmoji || '📷'}</div>
         )}
       </div>
 
-      {action.description && (
+      {action.title && (
+        <div className="action-title">
+          <strong>Tiêu đề:</strong> {action.title}
+        </div>
+      )}
+
+      {(action.content || action.description) && (
         <div className="action-description">
-          <strong>Mô tả:</strong> {action.description}
+          <strong>Nội dung:</strong> {action.content || action.description}
         </div>
       )}
 

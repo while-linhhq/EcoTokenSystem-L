@@ -293,6 +293,134 @@
   transform: translateY(-2px);
 }
 
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 15px;
+  padding: 30px;
+  max-width: 500px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  animation: modalSlideIn 0.3s ease-out;
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.modal-header h3 {
+  margin: 0;
+  color: #2d5016;
+  font-size: 1.5em;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 2em;
+  color: #999;
+  cursor: pointer;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+
+.modal-close:hover {
+  background: #f0f0f0;
+  color: #333;
+}
+
+.modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.modal-body {
+  padding: 10px 0;
+}
+
+.modal-body p {
+  margin: 0 0 10px 0;
+  color: #333;
+  line-height: 1.6;
+}
+
+/* Emoji Picker Styles */
+.emoji-picker-container {
+  position: relative;
+}
+
+.emoji-picker-dropdown {
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.emoji-picker-dropdown::-webkit-scrollbar {
+  width: 8px;
+}
+
+.emoji-picker-dropdown::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.emoji-picker-dropdown::-webkit-scrollbar-thumb {
+  background: #4a7c2a;
+  border-radius: 4px;
+}
+
+.emoji-picker-dropdown::-webkit-scrollbar-thumb:hover {
+  background: #6ba644;
+}
+
 @media (max-width: 768px) {
   .admin-tabs {
     justify-content: flex-start;
@@ -312,6 +440,10 @@
   .edit-btn {
     width: 100%;
     margin-top: 15px;
+  }
+
+  .emoji-picker-dropdown > div:first-child {
+    grid-template-columns: repeat(6, 1fr) !important;
   }
 }
 

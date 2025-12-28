@@ -59,41 +59,54 @@ namespace EcoTokenSystem.Application.Services
 
         public async Task<ResponseDTO<LoginResponseDTO>> LoginAsync(LoginRequestDTO request)
         {   
-            var user = await dbContext.Users
-                .Include(u => u.Role) // Dùng Include nếu bạn muốn lấy luôn RoleName
-                .FirstOrDefaultAsync(u => u.Username == request.Username);
-
-            // Kiểm tra User hoặc Mật khẩu
-            if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
+            try
             {
+                var user = await dbContext.Users
+                    .Include(u => u.Role) // Dùng Include nếu bạn muốn lấy luôn RoleName
+                    .FirstOrDefaultAsync(u => u.Username == request.Username);
+
+                // Kiểm tra User hoặc Mật khẩu
+                if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
+                {
+                    return new ResponseDTO<LoginResponseDTO>
+                    {
+                        IsSuccess = false,
+                        Message = "Tên đăng nhập hoặc mật khẩu không chính xác.",
+                        Data = new LoginResponseDTO() { }
+                    };
+                }
+
+                // 3. Kiểm tra RoleName và tạo Token
+                var roleName = user.Role?.Name ?? "User"; // Lấy tên Role từ navigation property (hoặc gán cứng "User" nếu Role bị null)
+
+                // Tạo JWT
+                var token = _tokenService.GenerateToken(user, roleName);
+
+                // 4. Trả về Response thành công cùng với Token và thông tin cơ bản
                 return new ResponseDTO<LoginResponseDTO>
                 {
-                    IsSuccess = false,
-                    Message = "Tên đăng nhập hoặc mật khẩu không chính xác.",
-                    Data = new LoginResponseDTO() { }
+                    IsSuccess = true,
+                    Message = "Đăng nhập thành công!",
+                    Data = new LoginResponseDTO()
+                    {
+                        UserId = user.Id,
+                        Username = user.Username,
+                        RoleName = roleName,
+                        CurrentPoints = user.CurrentPoints,
+                        Token = token
+                    }
                 };
             }
-
-            // 3. Kiểm tra RoleName và tạo Token
-            var roleName = user.Role?.Name ?? "User"; // Lấy tên Role từ navigation property (hoặc gán cứng "User" nếu Role bị null)
-
-            // Tạo JWT
-            var token = _tokenService.GenerateToken(user, roleName);
-
-            // 4. Trả về Response thành công cùng với Token và thông tin cơ bản
-            return new ResponseDTO<LoginResponseDTO>
+            catch (Microsoft.EntityFrameworkCore.DbUpdateException dbEx)
             {
-                IsSuccess = true,
-                Message = "Đăng nhập thành công!",
-                Data = new LoginResponseDTO()
-                {
-                    UserId = user.Id,
-                    Username = user.Username,
-                    RoleName = roleName,
-                    CurrentPoints = user.CurrentPoints,
-                    Token = token
-                }
-            };
+                // Lỗi database (có thể do migration chưa chạy)
+                throw new Exception($"Lỗi database: {dbEx.Message}. Có thể migration chưa được chạy. Chi tiết: {dbEx.InnerException?.Message ?? dbEx.Message}");
+            }
+            catch (Exception ex)
+            {
+                // Lỗi khác
+                throw new Exception($"Lỗi khi đăng nhập: {ex.Message}. Chi tiết: {ex.InnerException?.Message ?? ex.Message}");
+            }
         }
 
         public async Task<ResponseDTO> ChangePasswordAsync(ChangePasswordRequestDTO request, Guid userId)
@@ -216,11 +229,12 @@ namespace EcoTokenSystem.Application.Services
             {
                 posts.Add(new PostsDTO()
                 {
+                    Id = post.Id, // QUAN TRỌNG: Phải có Id để frontend map đúng
                     Title = post.Title,
                     Content = post.Content,
                     ImageUrl = post.ImageUrl,
                     UserId = post.UserId,
-                    StatusId = post.StatusId,
+                    StatusId = post.StatusId, // 1=Pending, 2=Approved, 3=Rejected
                     AdminId = post.AdminId,
                     AwardedPoints = post.AwardedPoints,
                     SubmittedAt = post.SubmittedAt,
@@ -235,6 +249,281 @@ namespace EcoTokenSystem.Application.Services
                 Data = posts.ToList()
             };
 
+        }
+
+        // Admin: Get all users
+        public async Task<ResponseDTO<List<UserListDTO>>> GetAllUsersAsync()
+        {
+            var users = await dbContext.Users
+                .Include(u => u.Role)
+                .ToListAsync();
+
+            var userList = users.Select(u => new UserListDTO
+            {
+                Id = u.Id,
+                Username = u.Username,
+                Name = u.Name ?? string.Empty,
+                PhoneNumber = u.PhoneNumber ?? string.Empty,
+                Address = u.Address ?? string.Empty,
+                Gender = u.Gender ?? string.Empty,
+                DateOfBirth = u.DateOfBirth,
+                RoleName = u.Role?.Name ?? "User",
+                RoleId = u.RoleId,
+                CurrentPoints = u.CurrentPoints,
+                Streak = u.Streak,
+                CreatedAt = u.CreatedAt
+            }).ToList();
+
+            return new ResponseDTO<List<UserListDTO>>
+            {
+                IsSuccess = true,
+                Message = "Lấy danh sách users thành công",
+                Data = userList
+            };
+        }
+
+        // Admin: Update user
+        public async Task<ResponseDTO> AdminUpdateUserAsync(Guid userId, AdminUpdateUserDTO request)
+        {
+            var userDomain = await dbContext.Users.FirstOrDefaultAsync(u => u.Id == userId);
+            if (userDomain == null)
+            {
+                return new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = "Không tìm thấy user"
+                };
+            }
+
+            // Update only provided fields
+            if (request.Name != null) userDomain.Name = request.Name;
+            if (request.PhoneNumber != null) userDomain.PhoneNumber = request.PhoneNumber;
+            if (request.Address != null) userDomain.Address = request.Address;
+            if (request.Gender != null) userDomain.Gender = request.Gender;
+            if (request.DateOfBirth.HasValue)
+            {
+                userDomain.DateOfBirth = request.DateOfBirth.Value.ToDateTime(TimeOnly.MinValue);
+            }
+            if (request.CurrentPoints.HasValue) userDomain.CurrentPoints = request.CurrentPoints.Value;
+            if (request.Streak.HasValue) userDomain.Streak = request.Streak.Value;
+            if (request.RoleId.HasValue) userDomain.RoleId = request.RoleId.Value;
+
+            dbContext.Users.Update(userDomain);
+            await dbContext.SaveChangesAsync();
+
+            return new ResponseDTO
+            {
+                IsSuccess = true,
+                Message = "Cập nhật user thành công"
+            };
+        }
+
+        // Admin: Create user
+        public async Task<ResponseDTO> AdminCreateUserAsync(RegisterRequestDTO request, int roleId = 1)
+        {
+            try
+            {
+                // Validate input
+                if (string.IsNullOrWhiteSpace(request.Username))
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "Tên đăng nhập không được để trống"
+                    };
+                }
+
+                if (string.IsNullOrWhiteSpace(request.Password) || request.Password.Length < 8)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "Mật khẩu phải có ít nhất 8 ký tự"
+                    };
+                }
+
+                // Validate RoleId tồn tại, nếu không thì tự động thêm (đặc biệt cho Moderator)
+                var roleExists = await dbContext.Roles.AnyAsync(r => r.Id == roleId);
+                if (!roleExists)
+                {
+                    // Tự động thêm Moderator role nếu roleId = 3
+                    if (roleId == 3)
+                    {
+                        try
+                        {
+                            var moderatorRole = new EcoTokenSystem.Domain.Entities.Role { Id = 3, Name = "Moderator" };
+                            dbContext.Roles.Add(moderatorRole);
+                            await dbContext.SaveChangesAsync();
+                            // Role đã được thêm, tiếp tục
+                        }
+                        catch (Exception addRoleEx)
+                        {
+                            // Nếu thêm role fail (có thể do đã tồn tại hoặc constraint), kiểm tra lại
+                            roleExists = await dbContext.Roles.AnyAsync(r => r.Id == roleId);
+                            if (!roleExists)
+                            {
+                                // Lấy danh sách roles hiện có để hiển thị
+                                var availableRoles = await dbContext.Roles.Select(r => $"{r.Id}={r.Name}").ToListAsync();
+                                return new ResponseDTO
+                                {
+                                    IsSuccess = false,
+                                    Message = $"Không thể thêm Moderator role (Id=3). Lỗi: {addRoleEx.Message}. Roles hiện có: {string.Join(", ", availableRoles)}"
+                                };
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // RoleId khác 3 và không tồn tại
+                        var availableRoles = await dbContext.Roles.Select(r => $"{r.Id}={r.Name}").ToListAsync();
+                        return new ResponseDTO
+                        {
+                            IsSuccess = false,
+                            Message = $"RoleId {roleId} không tồn tại trong hệ thống. Roles hiện có: {string.Join(", ", availableRoles)}"
+                        };
+                    }
+                }
+
+                var existedUser = await dbContext.Users.FirstOrDefaultAsync(u => u.Username.Equals(request.Username));
+                if (existedUser != null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "Tên đăng nhập đã tồn tại!"
+                    };
+                }
+
+                string passwordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
+
+                var userDomain = new User()
+                {
+                    Id = Guid.NewGuid(),
+                    Username = request.Username,
+                    PasswordHash = passwordHash,
+                    RoleId = roleId,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                await dbContext.Users.AddAsync(userDomain);
+                await dbContext.SaveChangesAsync();
+
+                return new ResponseDTO
+                {
+                    IsSuccess = true,
+                    Message = "Tạo user thành công"
+                };
+            }
+            catch (Microsoft.EntityFrameworkCore.DbUpdateException dbEx)
+            {
+                // Lỗi database (foreign key, constraint, etc.)
+                return new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = $"Lỗi database: {dbEx.InnerException?.Message ?? dbEx.Message}"
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = $"Lỗi khi tạo user: {ex.Message}"
+                };
+            }
+        }
+
+        // Admin: Delete user
+        public async Task<ResponseDTO> AdminDeleteUserAsync(Guid userId)
+        {
+            try
+            {
+                var userDomain = await dbContext.Users
+                    .Include(u => u.Posts)
+                    .Include(u => u.PointsHistory)
+                    .Include(u => u.ItemsHistory)
+                    .FirstOrDefaultAsync(u => u.Id == userId);
+
+                if (userDomain == null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "Không tìm thấy user"
+                    };
+                }
+
+                // Không cho phép xóa Admin user (bảo vệ tài khoản admin)
+                if (userDomain.RoleId == 2) // RoleId 2 = Admin
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "Không thể xóa tài khoản Admin"
+                    };
+                }
+
+                // Xóa các bản ghi liên quan trước (do có Restrict constraint)
+                // 1. Xóa Posts của user
+                var userPosts = await dbContext.Posts.Where(p => p.UserId == userId).ToListAsync();
+                if (userPosts.Any())
+                {
+                    dbContext.Posts.RemoveRange(userPosts);
+                }
+
+                // 2. Xóa PointHistories của user
+                var userPointHistories = await dbContext.PointHistories.Where(ph => ph.UserId == userId).ToListAsync();
+                if (userPointHistories.Any())
+                {
+                    dbContext.PointHistories.RemoveRange(userPointHistories);
+                }
+
+                // 3. Xóa ItemsHistory của user
+                var userItemsHistories = await dbContext.ItemsHistory.Where(ih => ih.UserId == userId).ToListAsync();
+                if (userItemsHistories.Any())
+                {
+                    dbContext.ItemsHistory.RemoveRange(userItemsHistories);
+                }
+
+                // Set null cho AdminId trong Posts và PointHistories (đã có SetNull constraint)
+                var postsWithAdminId = await dbContext.Posts.Where(p => p.AdminId == userId).ToListAsync();
+                foreach (var post in postsWithAdminId)
+                {
+                    post.AdminId = null;
+                }
+
+                var pointHistoriesWithAdminId = await dbContext.PointHistories.Where(ph => ph.AdminId == userId).ToListAsync();
+                foreach (var ph in pointHistoriesWithAdminId)
+                {
+                    ph.AdminId = null;
+                }
+
+                // Xóa user
+                dbContext.Users.Remove(userDomain);
+                await dbContext.SaveChangesAsync();
+
+                return new ResponseDTO
+                {
+                    IsSuccess = true,
+                    Message = "Xóa user thành công"
+                };
+            }
+            catch (Microsoft.EntityFrameworkCore.DbUpdateException dbEx)
+            {
+                return new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = $"Lỗi database khi xóa user: {dbEx.InnerException?.Message ?? dbEx.Message}"
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = $"Lỗi khi xóa user: {ex.Message}"
+                };
+            }
         }
 
     }

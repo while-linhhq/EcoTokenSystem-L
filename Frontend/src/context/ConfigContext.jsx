@@ -4,7 +4,9 @@ import {
   updateGiftPriceApi, 
   updateStreakMilestoneApi, 
   updateActionRewardApi, 
-  updateDefaultActionRewardApi 
+  updateDefaultActionRewardApi,
+  deleteStreakMilestoneApi,
+  deleteActionRewardApi
 } from '../api/configApi';
 
 const ConfigContext = createContext();
@@ -112,6 +114,30 @@ export const ConfigProvider = ({ children }) => {
     return config.actionRewards.tags[tag] || config.actionRewards.default;
   };
 
+  const deleteStreakMilestone = async (streak) => {
+    try {
+      const response = await deleteStreakMilestoneApi(streak);
+      if (response.success) {
+        setConfig(response.data);
+        return { success: true, message: response.message };
+      }
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
+  };
+
+  const deleteActionReward = async (tag) => {
+    try {
+      const response = await deleteActionRewardApi(tag);
+      if (response.success) {
+        setConfig(response.data);
+        return { success: true, message: response.message };
+      }
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
+  };
+
   return (
     <ConfigContext.Provider
       value={{
@@ -121,6 +147,8 @@ export const ConfigProvider = ({ children }) => {
         updateStreakMilestone,
         updateActionReward,
         updateDefaultActionReward,
+        deleteStreakMilestone,
+        deleteActionReward,
         getGiftPrice,
         getActionReward
       }}

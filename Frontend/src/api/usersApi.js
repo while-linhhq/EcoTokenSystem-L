@@ -1,115 +1,314 @@
-import { createResponse, createError, delay } from './api';
+// ============================================
+// USERS API - GỌI BACKEND THẬT (Admin)
+// ============================================
+import { apiGet, apiPost, apiPatch, apiDelete } from './apiClient';
 
-// Get all users API
+/**
+ * Map UserListDTO từ backend sang format frontend
+ */
+const mapUserResponse = (backendUser) => {
+  return {
+    id: backendUser.Id || backendUser.id,
+    userId: backendUser.Id || backendUser.id,
+    username: backendUser.Username || backendUser.username,
+    name: backendUser.Name || backendUser.name || '',
+    nickname: backendUser.Name || backendUser.name || backendUser.Username || '',
+    email: '', // Backend không có email field
+    phone: backendUser.PhoneNumber || backendUser.phoneNumber || '',
+    phoneNumber: backendUser.PhoneNumber || backendUser.phoneNumber || '',
+    address: backendUser.Address || backendUser.address || '',
+    gender: backendUser.Gender || backendUser.gender || '',
+    dateOfBirth: backendUser.DateOfBirth || backendUser.dateOfBirth,
+    role: (backendUser.RoleName || backendUser.roleName || 'user').toLowerCase(),
+    roleName: backendUser.RoleName || backendUser.roleName || 'User',
+    roleId: backendUser.RoleId || backendUser.roleId || 1,
+    currentPoints: backendUser.CurrentPoints ?? backendUser.currentPoints ?? 0,
+    ecoTokens: backendUser.CurrentPoints ?? backendUser.currentPoints ?? 0, // Tương thích
+    streak: backendUser.Streak || backendUser.streak || 0,
+    createdAt: backendUser.CreatedAt || backendUser.createdAt,
+  };
+};
+
+/**
+ * Get all users API (Admin only)
+ * GET /api/User/all
+ */
 export const getAllUsersApi = async () => {
-  await delay(500);
+  try {
+    console.log('[getAllUsersApi] Calling GET /User/all...');
+    const response = await apiGet('/User/all', true); // Cần auth (Admin)
 
-  const users = [];
-  const keys = Object.keys(localStorage);
-  const userMap = new Map();
+    console.log('[getAllUsersApi] Response:', {
+      success: response.success,
+      hasData: !!response.data,
+      dataType: typeof response.data,
+      isArray: Array.isArray(response.data),
+      dataLength: Array.isArray(response.data) ? response.data.length : 'N/A'
+    });
 
-  keys.forEach(key => {
-    if (key.startsWith('user_') || key === 'user') {
-      try {
-        const user = JSON.parse(localStorage.getItem(key));
-        if (user && user.id) {
-          userMap.set(user.id, user);
-        }
-      } catch (e) {
-        // Ignore invalid data
+    if (response.success && response.data) {
+      // response.data có thể là array trực tiếp hoặc nested trong ResponseDTO
+      let users = [];
+      if (Array.isArray(response.data)) {
+        users = response.data;
+      } else if (response.data.Data && Array.isArray(response.data.Data)) {
+        users = response.data.Data;
+      } else if (response.data.data && Array.isArray(response.data.data)) {
+        users = response.data.data;
       }
-    }
-  });
 
-  return createResponse(Array.from(userMap.values()), true);
+      console.log('[getAllUsersApi] Users found:', users.length);
+      const mappedUsers = users.map(mapUserResponse);
+      console.log('[getAllUsersApi] Mapped users:', mappedUsers.length);
+
+      return {
+        success: true,
+        message: response.message || 'Lấy danh sách users thành công',
+        data: mappedUsers
+      };
+    }
+
+    throw new Error(response.message || 'Không thể lấy danh sách users');
+  } catch (error) {
+    console.error('[getAllUsersApi] Error:', error);
+    return {
+      success: false,
+      message: error.message || 'Không thể lấy danh sách users',
+      data: []
+    };
+  }
 };
 
-// Create moderator API
+/**
+ * Create moderator/user API (Admin only)
+ * POST /api/User/admin/create?roleId={roleId}
+ * roleId: 1 = User, 2 = Admin, 3 = Moderator
+ */
 export const createModeratorApi = async (moderatorData) => {
-  await delay(800);
+  try {
+    // roleId: 1 = User, 2 = Admin, 3 = Moderator
+    const roleId = moderatorData.roleId || (moderatorData.role === 'moderator' ? 3 : 1);
+    const username = moderatorData.email || moderatorData.username || moderatorData.nickname;
+    
+    console.log('[createModeratorApi] Request:', { username, roleId, hasPassword: !!moderatorData.password });
+    
+    try {
+      const response = await apiPost(`/User/admin/create?roleId=${roleId}`, {
+        username: username,
+        password: moderatorData.password,
+        passwordConfirm: moderatorData.password
+      }, true); // Cần auth (Admin)
+      
+      console.log('[createModeratorApi] Response:', response);
 
-  const newModerator = {
-    ...moderatorData,
-    id: `mod-${Date.now()}`,
-    role: 'moderator',
-    createdAt: new Date().toISOString()
-  };
+      if (response && response.success) {
+        // Reload users để lấy user mới tạo
+        const usersResponse = await getAllUsersApi();
+        const newUser = usersResponse.data?.find(u => 
+          u.username === (moderatorData.email || moderatorData.username)
+        );
 
-  localStorage.setItem(`user_${newModerator.id}`, JSON.stringify(newModerator));
-  if (moderatorData.password) {
-    localStorage.setItem(`user_password_${newModerator.id}`, moderatorData.password);
-  }
+        // Map role từ roleId
+        const roleName = roleId === 3 ? 'Moderator' : (roleId === 2 ? 'Admin' : 'User');
+        const role = roleName.toLowerCase();
 
-  return createResponse(newModerator, true, 'Tạo tài khoản moderator thành công');
-};
-
-// Update user API (Admin)
-export const updateUserApi = async (userId, updatedData) => {
-  await delay(600);
-
-  const userKey = `user_${userId}`;
-  const userStr = localStorage.getItem(userKey) || localStorage.getItem('user');
-
-  if (!userStr) {
-    return createError('Không tìm thấy user', 404);
-  }
-
-  const user = JSON.parse(userStr);
-  const updatedUser = {
-    ...user,
-    ...updatedData,
-    updatedAt: new Date().toISOString()
-  };
-
-  localStorage.setItem(`user_${userId}`, JSON.stringify(updatedUser));
-
-  // Update current user if it's the same
-  const currentUser = localStorage.getItem('user');
-  if (currentUser) {
-    const current = JSON.parse(currentUser);
-    if (current.id === userId) {
-      localStorage.setItem('user', JSON.stringify(updatedUser));
-    }
-  }
-
-  return createResponse(updatedUser, true, 'Cập nhật user thành công');
-};
-
-// Search users API
-export const searchUsersApi = async (searchTerm) => {
-  await delay(400);
-
-  const users = [];
-  const keys = Object.keys(localStorage);
-  const userMap = new Map();
-
-  keys.forEach(key => {
-    if (key.startsWith('user_') || key === 'user') {
-      try {
-        const user = JSON.parse(localStorage.getItem(key));
-        if (user && user.id) {
-          userMap.set(user.id, user);
-        }
-      } catch (e) {
-        // Ignore invalid data
+        return {
+          success: true,
+          message: response.message || 'Tạo tài khoản thành công',
+          data: newUser || {
+            id: Date.now(),
+            username: moderatorData.email || moderatorData.username,
+            name: moderatorData.nickname,
+            nickname: moderatorData.nickname,
+            role: role,
+            roleName: roleName,
+            roleId: roleId
+          }
+        };
       }
+
+      // Nếu response không có success hoặc success = false
+      const errorMessage = response?.message || 'Tạo tài khoản thất bại';
+      console.error('[createModeratorApi] Failed:', errorMessage, response);
+      return {
+        success: false,
+        message: errorMessage
+      };
+    } catch (apiError) {
+      // Lỗi từ apiPost (network, HTTP error, etc.)
+      console.error('[createModeratorApi] API Error:', apiError);
+      const errorMessage = apiError?.message || apiError?.toString() || 'Lỗi kết nối đến server';
+      return {
+        success: false,
+        message: errorMessage
+      };
     }
-  });
-
-  const allUsers = Array.from(userMap.values());
-
-  if (!searchTerm) {
-    return createResponse(allUsers, true);
+  } catch (error) {
+    // Lỗi không mong đợi
+    console.error('[createModeratorApi] Unexpected Error:', error);
+    return {
+      success: false,
+      message: error?.message || error?.toString() || 'Có lỗi xảy ra khi tạo tài khoản'
+    };
   }
-
-  const term = searchTerm.toLowerCase();
-  const filtered = allUsers.filter(user =>
-    user.nickname?.toLowerCase().includes(term) ||
-    user.email?.toLowerCase().includes(term) ||
-    user.phone?.includes(term) ||
-    user.fullName?.toLowerCase().includes(term)
-  );
-
-  return createResponse(filtered, true);
 };
 
+/**
+ * Update user API (Admin only)
+ * PATCH /api/User/{userId}
+ */
+export const updateUserApi = async (userId, updatedData) => {
+  try {
+    // Map frontend data sang backend format
+    let dateOfBirth = null;
+    if (updatedData.dateOfBirth) {
+      const date = new Date(updatedData.dateOfBirth);
+      dateOfBirth = date.toISOString().split('T')[0]; // Format: YYYY-MM-DD
+    }
+
+    const backendData = {
+      name: updatedData.name || updatedData.nickname || null,
+      phoneNumber: updatedData.phoneNumber || updatedData.phone || null,
+      address: updatedData.address || null,
+      gender: updatedData.gender || null,
+      dateOfBirth: dateOfBirth ? new Date(dateOfBirth + 'T00:00:00').toISOString().split('T')[0] : null,
+      currentPoints: updatedData.currentPoints ?? updatedData.ecoTokens ?? null,
+      streak: updatedData.streak ?? null,
+      roleId: updatedData.roleId ?? null,
+    };
+
+    // Remove null values
+    Object.keys(backendData).forEach(key => {
+      if (backendData[key] === null) {
+        delete backendData[key];
+      }
+    });
+
+    const response = await apiPatch(`/User/${userId}`, backendData, true); // Cần auth (Admin)
+
+    if (response.success) {
+      return {
+        success: true,
+        message: response.message || 'Cập nhật user thành công',
+        data: {
+          ...updatedData,
+          id: userId
+        }
+      };
+    }
+
+    throw new Error(response.message || 'Cập nhật user thất bại');
+  } catch (error) {
+    return {
+      success: false,
+      message: error.message || 'Cập nhật user thất bại'
+    };
+  }
+};
+
+/**
+ * Delete user API (Admin only)
+ * DELETE /api/User/{userId}
+ */
+export const deleteUserApi = async (userId) => {
+  try {
+    const response = await apiDelete(`/User/${userId}`, true); // Cần auth (Admin)
+
+    if (response.success) {
+      return {
+        success: true,
+        message: response.message || 'Xóa user thành công'
+      };
+    }
+
+    throw new Error(response.message || 'Xóa user thất bại');
+  } catch (error) {
+    return {
+      success: false,
+      message: error.message || 'Xóa user thất bại'
+    };
+  }
+};
+
+/**
+ * Search users API
+ * Sử dụng getAllUsersApi và filter ở frontend
+ */
+export const searchUsersApi = async (searchTerm) => {
+  try {
+    const response = await getAllUsersApi();
+    if (!response.success) {
+      return [];
+    }
+
+    if (!searchTerm) {
+      return response.data;
+    }
+
+    const term = searchTerm.toLowerCase();
+    return response.data.filter(user =>
+      user.username?.toLowerCase().includes(term) ||
+      user.name?.toLowerCase().includes(term) ||
+      user.nickname?.toLowerCase().includes(term) ||
+      user.phone?.includes(term) ||
+      user.phoneNumber?.includes(term)
+    );
+  } catch (error) {
+    return [];
+  }
+};
+
+/**
+ * Get leaderboard API
+ * GET /api/User/leaderboard?sortBy={streak|tokens}&limit={limit}
+ * @param {string} sortBy - 'streak' or 'tokens' (default: 'tokens')
+ * @param {number|null} limit - Number of users to return (null = all users)
+ */
+export const getLeaderboardApi = async (sortBy = 'tokens', limit = null) => {
+  try {
+    let url = `/User/leaderboard?sortBy=${sortBy}`;
+    if (limit !== null && limit > 0) {
+      url += `&limit=${limit}`;
+    }
+    
+    console.log('[getLeaderboardApi] Calling:', url);
+    const response = await apiGet(url, false); // Public access
+    console.log('[getLeaderboardApi] Raw response:', response);
+    
+    if (response.success && response.data) {
+      const leaderboard = Array.isArray(response.data) ? response.data : 
+                         (Array.isArray(response.Data) ? response.Data : []);
+      
+      // Map PascalCase to camelCase
+      const mappedLeaderboard = leaderboard.map(entry => ({
+        userId: entry.UserId || entry.userId,
+        userName: entry.UserName || entry.userName || 'Người dùng',
+        currentPoints: entry.CurrentPoints !== undefined ? entry.CurrentPoints : (entry.currentPoints || 0),
+        streak: entry.Streak !== undefined ? entry.Streak : (entry.streak || 0),
+        rank: entry.Rank !== undefined ? entry.Rank : (entry.rank || 0)
+      }));
+      
+      console.log('[getLeaderboardApi] Mapped leaderboard:', mappedLeaderboard);
+      
+      return {
+        success: true,
+        message: response.message || 'Lấy bảng xếp hạng thành công',
+        data: mappedLeaderboard
+      };
+    }
+    
+    console.warn('[getLeaderboardApi] No data in response:', response);
+    return {
+      success: false,
+      message: response.message || 'Không thể lấy bảng xếp hạng',
+      data: []
+    };
+  } catch (error) {
+    console.error('[getLeaderboardApi] Error:', error);
+    return {
+      success: false,
+      message: error.message || 'Không thể lấy bảng xếp hạng',
+      data: []
+    };
+  }
+};

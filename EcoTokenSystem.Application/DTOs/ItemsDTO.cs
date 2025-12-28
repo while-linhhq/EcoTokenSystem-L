@@ -12,5 +12,6 @@ namespace EcoTokenSystem.Application.DTOs
         public string Name { get; set; }
         public string ImageUrl { get; set; }
         public int RequiredPoints { get; set; }
+        public string Tag { get; set; } = "handmade";
     }
 }

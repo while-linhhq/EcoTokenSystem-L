@@ -20,41 +20,55 @@ namespace EcoTokenSystem.Application.Services
         }
         public async Task<ResponseDTO<List<PointHistoryDTO>>> PointsHistoryAsync(Guid? userId)
         {
+            try
+            {
+                // Tối ưu: Filter trước khi query database
+                var historyQuery = dbContext.PointHistories.AsQueryable();
+                
+                if (userId.HasValue)
+                {
+                    historyQuery = historyQuery.Where(p => p.UserId == userId);
+                }
 
+                var historyDomain = await historyQuery
+                    .OrderByDescending(h => h.TransactionDate)
+                    .ToListAsync();
 
-            var historyDomain = await dbContext.PointHistories.ToListAsync();
-            if (historyDomain.Count == 0)
+                if (historyDomain.Count == 0)
+                {
+                    return new ResponseDTO<List<PointHistoryDTO>>()
+                    {
+                        IsSuccess = true, // Đổi thành true vì không có data không phải lỗi
+                        Message = "Không có lịch sử tặng điểm",
+                        Data = new List<PointHistoryDTO>()
+                    };
+                }
+
+                var historyList = historyDomain.Select(history => new PointHistoryDTO()
+                {
+                    UserId = history.UserId,
+                    PostId = history.PostId,
+                    AdminId = history.AdminId,
+                    PointsChange = history.PointsChange,
+                    TransactionDate = history.TransactionDate
+                }).ToList();
+
+                return new ResponseDTO<List<PointHistoryDTO>>()
+                {
+                    IsSuccess = true,
+                    Message = "Lịch sử tặng điểm",
+                    Data = historyList
+                };
+            }
+            catch (Exception ex)
             {
                 return new ResponseDTO<List<PointHistoryDTO>>()
                 {
                     IsSuccess = false,
-                    Message = "Không có lịch sử tặng điểm",
+                    Message = $"Lỗi khi lấy lịch sử điểm: {ex.Message}",
                     Data = new List<PointHistoryDTO>()
                 };
             }
-
-            var historyQuery = historyDomain.ToList().AsQueryable();
-            if (userId.HasValue)
-            {
-                historyQuery = historyDomain.Where(p => p.UserId.Equals(userId)).AsQueryable();
-            }
-
-            var historyList = historyQuery.Select(history => new PointHistoryDTO()
-            {
-                UserId = history.UserId,
-                PostId = history.PostId,
-                AdminId = history.AdminId,
-                PointsChange = history.PointsChange,
-                TransactionDate = history.TransactionDate
-            }).ToList();
-
-            return new ResponseDTO<List<PointHistoryDTO>>()
-            {
-                IsSuccess = true,
-                Message = "Lịch sử tặng điểm",
-                Data = historyList
-            };
-
         }
     }
 }

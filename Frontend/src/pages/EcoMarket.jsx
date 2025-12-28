@@ -3,11 +3,12 @@ import { useAuth } from '../context/AuthContext';
 import { useGiftHistory } from '../context/GiftHistoryContext';
 import { useConfig } from '../context/ConfigContext';
 import { getGiftsApi, exchangeGiftApi } from '../api/giftsApi';
+import { getCurrentUserApi } from '../api/authApi';
 import './EcoMarket.css';
 
 const EcoMarket = () => {
   const { user, login, updateUser } = useAuth();
-  const { addGiftExchange, loadGiftHistory } = useGiftHistory();
+  const { loadGiftHistory } = useGiftHistory();
   const { getGiftPrice } = useConfig();
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [gifts, setGifts] = useState([]);
@@ -58,9 +59,10 @@ const EcoMarket = () => {
     }
 
     const price = getGiftPrice(gift.id, gift.price);
+    const userPoints = user.currentPoints || user.ecoTokens || 0;
 
-    if (user.ecoTokens < price) {
-      alert(`Bạn không đủ Eco Tokens! Cần ${price} tokens, bạn có ${user.ecoTokens} tokens.`);
+    if (userPoints < price) {
+      alert(`Bạn không đủ Eco Tokens! Cần ${price} tokens, bạn có ${userPoints} tokens.`);
       return;
     }
 
@@ -75,26 +77,17 @@ const EcoMarket = () => {
         const response = await exchangeGiftApi(user.id, gift.id, price);
         
         if (response.success) {
-          // Update user balance
-          await updateUser({ ecoTokens: response.data.remainingTokens });
+          // Refresh toàn bộ user data từ API để đồng bộ tokens và streak với database
+          const userResponse = await getCurrentUserApi();
+          if (userResponse.success && userResponse.data) {
+            await updateUser(userResponse.data);
+          }
           
-          // Add to gift history
-          addGiftExchange({
-            userId: user.id,
-            userName: user.nickname,
-            giftId: gift.id,
-            giftName: gift.name,
-            giftImage: gift.image,
-            giftDescription: gift.description,
-            price: price,
-            tokensBefore: user.ecoTokens,
-            tokensAfter: response.data.remainingTokens
-          });
-          
-          // Reload gift history
+          // Reload gift history từ API (backend đã tự động tạo ItemsHistory)
           await loadGiftHistory(user.id);
           
-          alert(response.message || `Đổi quà thành công! Bạn còn ${response.data.remainingTokens} Eco Tokens.`);
+          const remainingTokens = userResponse.data?.ecoTokens || userResponse.data?.currentPoints || response.data?.remainingTokens || 0;
+          alert(response.message || `Đổi quà thành công! Bạn còn ${remainingTokens} Eco Tokens.`);
         } else {
           alert(response.message || 'Có lỗi xảy ra khi đổi quà');
         }
@@ -114,7 +107,7 @@ const EcoMarket = () => {
         {user && (
           <div className="user-tokens">
             <span className="token-icon">🪙</span>
-            <span className="token-amount">{user.ecoTokens || 0} Eco Tokens</span>
+            <span className="token-amount">{user.currentPoints || user.ecoTokens || 0} Eco Tokens</span>
           </div>
         )}
       </div>
@@ -139,7 +132,13 @@ const EcoMarket = () => {
       <div className="gifts-grid">
         {filteredGifts.map(gift => (
           <div key={gift.id} className="gift-card">
-            <div className="gift-image">{gift.image}</div>
+            <div className="gift-image">
+              {gift.imageUrl || gift.image ? (
+                <img src={gift.imageUrl || gift.image} alt={gift.name} />
+              ) : (
+                <div className="gift-placeholder">🛍️</div>
+              )}
+            </div>
             <div className="gift-info">
               <h3>{gift.name}</h3>
               <p className="gift-description">{gift.description}</p>
@@ -155,7 +154,7 @@ const EcoMarket = () => {
               <button
                 className="exchange-btn"
                 onClick={() => handleExchange(gift)}
-                disabled={!user || user.ecoTokens < getGiftPrice(gift.id, gift.price) || gift.stock <= 0}
+                disabled={!user || (user.currentPoints || user.ecoTokens || 0) < getGiftPrice(gift.id, gift.price) || gift.stock <= 0}
               >
                 Đổi ngay
               </button>

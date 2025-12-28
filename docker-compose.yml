@@ -1,0 +1,59 @@
+services:
+  # ============================================
+  # SERVICE 1: SQL SERVER (DATABASE)
+  # ============================================
+  sqlserver:
+    image: mcr.microsoft.com/azure-sql-edge:latest
+    container_name: ecotokensystem_sqlserver
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=YourStrong@Passw0rd
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver_data:/var/opt/mssql
+    networks:
+      - ecotoken-network
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f sqlservr || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+
+  # ============================================
+  # SERVICE 2: BACKEND API (ASP.NET Core)
+  # ============================================
+  backend:
+    build:
+      context: .
+      dockerfile: EcoTokenSystem/Dockerfile
+    container_name: ecotokensystem_backend
+    ports:
+      - "5109:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Docker
+      - ASPNETCORE_URLS=http://+:8080
+      - ConnectionStrings__DefaultConnection=Server=sqlserver;Database=EcoTokenDatabase;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=True;MultipleActiveResultSets=true
+    volumes:
+      # Mount wwwroot để persist ảnh và static files
+      - ./EcoTokenSystem/wwwroot:/app/wwwroot
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    networks:
+      - ecotoken-network
+
+# ============================================
+# VOLUMES (PERSISTENT STORAGE)
+# ============================================
+volumes:
+  sqlserver_data:
+
+# ============================================
+# NETWORKS (CONTAINER COMMUNICATION)
+# ============================================
+networks:
+  ecotoken-network:
+    driver: bridge
+

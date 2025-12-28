@@ -15,6 +15,7 @@ namespace EcoTokenSystem.Application.DTOs
         [Required]
         [Range(1, int.MaxValue, ErrorMessage = "Điểm yêu cầu phải lớn hơn 0.")]
         public int RequiredPoints { get; set; }
+        public string Tag { get; set; } = "handmade"; // handmade, vouchers, books, movies, donations
         public IFormFile? ImageItem { get; set; }
     }
 }

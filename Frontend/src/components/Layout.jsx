@@ -19,6 +19,7 @@ const Layout = ({ children }) => {
     { path: '/home', label: '🏠 Trang chủ', icon: '🏠' },
     { path: '/market', label: '🛍️ Eco Market', icon: '🛍️' },
     { path: '/social', label: '🌍 Cộng đồng', icon: '🌍' },
+    { path: '/leaderboard', label: '🏆 Bảng xếp hạng', icon: '🏆' },
     { path: '/gift-history', label: '📦 Lịch sử quà', icon: '📦' },
     { path: '/action-history', label: '📸 Lịch sử hành động', icon: '📸' },
     { path: '/profile', label: '⚙️ Cài đặt', icon: '⚙️' }

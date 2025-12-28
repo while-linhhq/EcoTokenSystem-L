@@ -3,6 +3,7 @@ using EcoTokenSystem.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System;
+using System.Security.Claims;
 
 namespace EcoTokenSystem.API.Controllers
 {
@@ -49,10 +50,10 @@ namespace EcoTokenSystem.API.Controllers
         }
 
         // --- 2. DUYỆT/TỪ CHỐI BÀI ĐĂNG (ApproveRejectPost) ---
-        // Sửa: Yêu cầu quyền Admin và lấy AdminId từ Token
+        // Sửa: Yêu cầu quyền Admin hoặc Moderator và lấy AdminId từ Token
         [HttpPatch]
         [Route("{id:Guid}")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,Moderator")]
         public async Task<IActionResult> ApproveRejectPost([FromRoute] Guid id, [FromBody] ApproveAndRejectPostDTO request)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
@@ -74,19 +75,67 @@ namespace EcoTokenSystem.API.Controllers
             }
         }
 
-        // --- 3. API XEM CÔNG KHAI (Posts) ---
-        // BỔ SUNG: Cho phép xem tất cả bài đã duyệt (StatusId = 2)
+        // --- 3. API XEM POSTS ---
+        // - Public: Chỉ xem được approved posts (statusId = 2)
+        // - Admin/Moderator: Xem được tất cả posts (pending, approved, rejected)
         [HttpGet]
-        public async Task<IActionResult> GetApprovedPosts(int statusId)
+        public async Task<IActionResult> GetPosts([FromQuery] int? statusId = null)
         {
             try
             {
-                // Dùng Guid.Empty hoặc logic khác nếu muốn lấy PUBLIC POSTS
-                // Nếu Service cho phép lọc theo StatusId = 2 (Approved)
-                Guid userId = GetUserIdFromToken();
-                var response = await _postService.GetPostsAsync(userId, statusId);
+                // Nếu không có statusId, mặc định là approved (2) cho public
+                // Admin/Moderator có thể truyền statusId=1 để xem pending posts
+                int? finalStatusId = statusId;
+                
+                // Nếu không có statusId và không phải Admin/Moderator, chỉ cho xem approved
+                if (!statusId.HasValue)
+                {
+                    // Kiểm tra role từ token - thử nhiều cách để lấy role
+                    var userRole = User?.FindFirst(ClaimTypes.Role)?.Value 
+                        ?? User?.FindFirst("http://schemas.microsoft.com/ws/2008/06/identity/claims/role")?.Value
+                        ?? User?.FindFirst("role")?.Value;
+                    
+                    if (userRole != "Admin" && userRole != "Moderator")
+                    {
+                        finalStatusId = 2; // Chỉ cho xem approved posts
+                    }
+                }
+                else
+                {
+                    // Nếu có statusId được truyền vào, kiểm tra quyền truy cập
+                    // Chỉ Admin/Moderator mới được xem pending (statusId=1) hoặc rejected (statusId=3)
+                    if (statusId.Value == 1 || statusId.Value == 3)
+                    {
+                        var userRole = User?.FindFirst(ClaimTypes.Role)?.Value 
+                            ?? User?.FindFirst("http://schemas.microsoft.com/ws/2008/06/identity/claims/role")?.Value
+                            ?? User?.FindFirst("role")?.Value;
+                        
+                        if (userRole != "Admin" && userRole != "Moderator")
+                        {
+                            // Không có quyền, chỉ cho xem approved
+                            finalStatusId = 2;
+                        }
+                    }
+                }
 
-                if (response.IsSuccess) return Ok(response.Data);
+                // Lấy posts - dùng Guid.Empty để lấy tất cả posts
+                // Lấy currentUserId từ token nếu có (để check like status)
+                Guid? currentUserId = null;
+                if (User?.Identity?.IsAuthenticated == true)
+                {
+                    try
+                    {
+                        currentUserId = GetUserIdFromToken();
+                    }
+                    catch
+                    {
+                        // Nếu không lấy được userId, giữ null (public access)
+                    }
+                }
+
+                var response = await _postService.GetPostsAsync(Guid.Empty, finalStatusId, currentUserId);
+
+                if (response.IsSuccess) return Ok(response);
                 return NotFound(response);
             }
             catch (Exception ex)

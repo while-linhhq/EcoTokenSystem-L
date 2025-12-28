@@ -42,6 +42,11 @@ namespace EcoTokenSystem.Infrastructure.Migrations
                     b.Property<int>("RequiredPoints")
                         .HasColumnType("int");
 
+                    b.Property<string>("Tag")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasDefaultValue("handmade");
+
                     b.HasKey("Id");
 
                     b.ToTable("Items");
@@ -50,23 +55,95 @@ namespace EcoTokenSystem.Infrastructure.Migrations
                         new
                         {
                             Id = new Guid("e2b1a8c0-4e3d-4b7f-8c9a-6f2e0d1b4c5a"),
-                            ImageUrl = "/images/rewards/voucher50k.png",
-                            Name = "Voucher Cây Xanh 50k",
-                            RequiredPoints = 500
+                            ImageUrl = "/imagesItem/4cf97def-f0ef-4a06-899d-dbffa4e2f02f.jpg",
+                            Name = "Túi xách vải ",
+                            RequiredPoints = 500,
+                            Tag = "handmade"
                         },
                         new
                         {
                             Id = new Guid("d7a5f4b3-2c1e-4a9d-9b8c-3f0a7e6d5b4c"),
-                            ImageUrl = "/images/rewards/reusablebottle.png",
+                            ImageUrl = "/imagesItem/af1c1380-7edc-40cf-afd1-95b6f8b6d91e.jpg",
                             Name = "Bình nước Thân thiện Môi trường",
-                            RequiredPoints = 1000
+                            RequiredPoints = 1000,
+                            Tag = "handmade"
                         },
                         new
                         {
                             Id = new Guid("c1e9d8a7-b6f5-4e3d-2c1b-0a9f8e7d6c5b"),
-                            ImageUrl = "/images/rewards/premium.png",
-                            Name = "1 Tháng Membership Premium",
-                            RequiredPoints = 2500
+                            ImageUrl = "/imagesItem/6144411c-172b-45d0-abcb-ae714ea825a5.jpg",
+                            Name = "Ống hút Tre",
+                            RequiredPoints = 400,
+                            Tag = "handmade"
+                        },
+                        new
+                        {
+                            Id = new Guid("ebb8e449-506c-4f12-9bac-15a63edd502f"),
+                            ImageUrl = "/imagesItem/75e0829b-fb8f-47f1-9977-d0d377aaca9d.jpg",
+                            Name = "Set quà tặng bằng tre ",
+                            RequiredPoints = 150,
+                            Tag = "handmade"
+                        },
+                        new
+                        {
+                            Id = new Guid("ed322a69-55b6-47c6-909d-2ce26aaf5a11"),
+                            ImageUrl = "/imagesItem/8e5f5ba6-8d81-4333-842d-292399c4a44c.jpg",
+                            Name = "Hộp bút thân thiện với môi trường",
+                            RequiredPoints = 200,
+                            Tag = "handmade"
+                        },
+                        new
+                        {
+                            Id = new Guid("046564c4-882e-49c7-bd74-eb38d41ef521"),
+                            ImageUrl = "/imagesItem/76b61892-6589-4fd1-af0c-9f02311683c9.jpg",
+                            Name = "Giá đỡ máy tính bảng bằng tre",
+                            RequiredPoints = 100,
+                            Tag = "handmade"
+                        });
+                });
+
+            modelBuilder.Entity("EcoTokenSystem.Domain.Entities.Config", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Key")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Value")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Configs");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("11111111-1111-1111-1111-111111111111"),
+                            Key = "GiftPrices",
+                            UpdatedAt = new DateTime(2025, 11, 21, 6, 58, 59, 677, DateTimeKind.Utc).AddTicks(2265),
+                            Value = "{}"
+                        },
+                        new
+                        {
+                            Id = new Guid("22222222-2222-2222-2222-222222222222"),
+                            Key = "StreakMilestones",
+                            UpdatedAt = new DateTime(2025, 11, 21, 6, 58, 59, 677, DateTimeKind.Utc).AddTicks(2265),
+                            Value = "{\"50\":{\"color\":\"#4A90E2\",\"emoji\":\"🐢\",\"name\":\"Linh vật xanh dương\"},\"100\":{\"color\":\"#FFD700\",\"emoji\":\"🌟\",\"name\":\"Linh vật vàng\"}}"
+                        },
+                        new
+                        {
+                            Id = new Guid("33333333-3333-3333-3333-333333333333"),
+                            Key = "ActionRewards",
+                            UpdatedAt = new DateTime(2025, 11, 21, 6, 58, 59, 677, DateTimeKind.Utc).AddTicks(2265),
+                            Value = "{\"default\":{\"streak\":1,\"ecoTokens\":10},\"tags\":{\"xe-dap\":{\"streak\":1,\"ecoTokens\":15},\"mang-coc\":{\"streak\":1,\"ecoTokens\":12},\"trong-cay\":{\"streak\":1,\"ecoTokens\":20},\"phan-loai-rac\":{\"streak\":1,\"ecoTokens\":12},\"binh-nuoc\":{\"streak\":1,\"ecoTokens\":10},\"tui-vai\":{\"streak\":1,\"ecoTokens\":10}}}"
                         });
                 });
 
@@ -235,6 +312,11 @@ namespace EcoTokenSystem.Infrastructure.Migrations
                         {
                             Id = 2,
                             Name = "Admin"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Name = "Moderator"
                         });
                 });
 
@@ -322,6 +404,80 @@ namespace EcoTokenSystem.Infrastructure.Migrations
                         });
                 });
 
+            modelBuilder.Entity("EcoTokenSystem.Domain.Entities.Comment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("PostId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PostId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Comments");
+                });
+
+            modelBuilder.Entity("EcoTokenSystem.Domain.Entities.Like", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("PostId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PostId");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("PostId", "UserId")
+                        .IsUnique();
+
+                    b.ToTable("Likes");
+                });
+
+            modelBuilder.Entity("EcoTokenSystem.Domain.Entities.Comment", b =>
+                {
+                    b.HasOne("EcoTokenSystem.Domain.Entities.Post", "Post")
+                        .WithMany("Comments")
+                        .HasForeignKey("PostId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("EcoTokenSystem.Domain.Entities.User", "User")
+                        .WithMany("Comments")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Post");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("EcoTokenSystem.Domain.Entities.ItemsHistory", b =>
                 {
                     b.HasOne("EcoTokenSystem.Domain.Entities.Items", "Item")
@@ -337,6 +493,25 @@ namespace EcoTokenSystem.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Item");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("EcoTokenSystem.Domain.Entities.Like", b =>
+                {
+                    b.HasOne("EcoTokenSystem.Domain.Entities.Post", "Post")
+                        .WithMany("Likes")
+                        .HasForeignKey("PostId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("EcoTokenSystem.Domain.Entities.User", "User")
+                        .WithMany("Likes")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Post");
 
                     b.Navigation("User");
                 });
@@ -386,6 +561,10 @@ namespace EcoTokenSystem.Infrastructure.Migrations
 
                     b.Navigation("Admin");
 
+                    b.Navigation("Comments");
+
+                    b.Navigation("Likes");
+
                     b.Navigation("Status");
 
                     b.Navigation("User");
@@ -419,7 +598,11 @@ namespace EcoTokenSystem.Infrastructure.Migrations
 
             modelBuilder.Entity("EcoTokenSystem.Domain.Entities.User", b =>
                 {
+                    b.Navigation("Comments");
+
                     b.Navigation("ItemsHistory");
+
+                    b.Navigation("Likes");
 
                     b.Navigation("PointsHistory");
 

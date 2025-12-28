@@ -106,5 +106,22 @@ namespace EcoTokenSystem.API.Controllers
                 return BadRequest(ex.Message);
             }
         }
+
+        [HttpGet]
+        [Route("history")]
+        [Authorize]
+        public async Task<IActionResult> GetItemsHistory()
+        {
+            try
+            {
+                Guid userId = GetUserIdFromToken();
+                var response = await pointsAndItemsService.GetItemsHistoryAsync(userId);
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
     }
 }

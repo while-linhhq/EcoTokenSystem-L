@@ -4,10 +4,12 @@ import './GiftHistory.css';
 
 const GiftHistory = () => {
   const { user } = useAuth();
-  const { getUserGiftHistory } = useGiftHistory();
+  const { giftHistory, loading } = useGiftHistory();
   
-  const history = getUserGiftHistory(user?.id || 0);
-  const totalSpent = history.reduce((sum, item) => sum + item.price, 0);
+  // API đã trả về dữ liệu đã được lọc theo user hiện tại (từ JWT token)
+  // Không cần filter lại, sử dụng trực tiếp giftHistory từ context
+  const history = giftHistory || [];
+  const totalSpent = history.reduce((sum, item) => sum + (item.price || 0), 0);
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
@@ -32,7 +34,12 @@ const GiftHistory = () => {
         </div>
       </div>
 
-      {history.length === 0 ? (
+      {loading ? (
+        <div className="empty-state">
+          <div className="empty-icon">⏳</div>
+          <p>Đang tải lịch sử đổi quà...</p>
+        </div>
+      ) : history.length === 0 ? (
         <div className="empty-state">
           <div className="empty-icon">📦</div>
           <p>Bạn chưa đổi quà nào</p>
@@ -42,10 +49,16 @@ const GiftHistory = () => {
         <div className="history-list">
           {history.map((item) => (
             <div key={item.id} className="history-item">
-              <div className="gift-image-large">{item.giftImage}</div>
+              <div className="gift-image-large">
+                {item.giftImageUrl || item.giftImage ? (
+                  <img src={item.giftImageUrl || item.giftImage} alt={item.giftName} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '8px' }} />
+                ) : (
+                  <div style={{ fontSize: '3em' }}>🛍️</div>
+                )}
+              </div>
               <div className="gift-details">
                 <h3>{item.giftName}</h3>
-                <p className="gift-description">{item.giftDescription}</p>
+                {item.giftDescription && <p className="gift-description">{item.giftDescription}</p>}
                 <div className="exchange-info">
                   <div className="info-row">
                     <span className="info-label">Giá:</span>
@@ -55,10 +68,12 @@ const GiftHistory = () => {
                     <span className="info-label">Thời gian:</span>
                     <span className="info-value">{formatDate(item.exchangedAt)}</span>
                   </div>
-                  <div className="info-row">
-                    <span className="info-label">Tokens còn lại:</span>
-                    <span className="info-value">🪙 {item.tokensAfter}</span>
-                  </div>
+                  {item.tokensAfter !== undefined && item.tokensAfter !== null && (
+                    <div className="info-row">
+                      <span className="info-label">Tokens còn lại:</span>
+                      <span className="info-value">🪙 {item.tokensAfter}</span>
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="exchange-status">
