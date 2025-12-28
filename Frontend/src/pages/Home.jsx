@@ -41,19 +41,15 @@ const Home = () => {
   useEffect(() => {
     const loadApprovedDates = async () => {
       if (!user?.id || !getUserActions) {
-        console.log('[Calendar] No user or getUserActions, clearing dates');
         setApprovedDates([]);
         return;
       }
       
       try {
         // Bước 1: Lấy thông tin các bài viết được duyệt của user
-        console.log('[Calendar] Step 1: Loading user actions for user:', user.id);
         const userActions = await getUserActions(user.id);
-        console.log('[Calendar] Total actions loaded:', userActions?.length || 0);
         
         if (!Array.isArray(userActions) || userActions.length === 0) {
-          console.log('[Calendar] No actions found');
           setApprovedDates([]);
           return;
         }
@@ -65,16 +61,10 @@ const Home = () => {
           
           // Kiểm tra có approvedRejectedAt không
           const hasDate = action.approvedRejectedAt || action.reviewedAt;
-          if (!hasDate) {
-            console.warn('[Calendar] Approved action missing date:', action.id, action);
-          }
           return hasDate;
         });
         
-        console.log('[Calendar] Approved actions found:', approved.length);
-        
         if (approved.length === 0) {
-          console.log('[Calendar] No approved actions with dates');
           setApprovedDates([]);
           return;
         }
@@ -95,27 +85,18 @@ const Home = () => {
               const date = new Date(dateStr);
               
               if (isNaN(date.getTime())) {
-                console.warn(`[Calendar] Action ${index + 1} invalid date:`, dateStr, 'for action:', action.id);
                 return null;
               }
               
               // Giữ nguyên ISO string để Calendar component xử lý timezone
               const isoString = date.toISOString();
-              console.log(`[Calendar] Action ${index + 1} date:`, {
-                original: dateStr,
-                parsed: isoString,
-                localDate: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
-              });
               
               return isoString;
-            } catch (error) {
-              console.warn(`[Calendar] Error parsing date for action ${index + 1}:`, dateStr, error);
+            } catch {
               return null;
             }
           })
           .filter(Boolean);
-        
-        console.log('[Calendar] Valid dates extracted:', dates.length);
         
         // Bước 3: Loại bỏ duplicate dates (nếu có nhiều bài được approve trong cùng một ngày)
         const uniqueDates = Array.from(new Set(dates));

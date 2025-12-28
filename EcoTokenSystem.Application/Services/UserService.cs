@@ -172,15 +172,16 @@ namespace EcoTokenSystem.Application.Services
 
         }
 
-        public async Task<ResponseDTO> UpdateProfileAsync(UpdateProfileRequestDTO request , Guid Id)
+        public async Task<ResponseDTO<ResponseUserProfileDTO>> UpdateProfileAsync(UpdateProfileRequestDTO request , Guid Id)
         {
-            var userDomain = await dbContext.Users.FirstOrDefaultAsync(u=> u.Id.Equals(Id));
+            var userDomain = await dbContext.Users.Include(u => u.Role).FirstOrDefaultAsync(u=> u.Id.Equals(Id));
             if(userDomain == null)
             {
-                return new ResponseDTO()
+                return new ResponseDTO<ResponseUserProfileDTO>()
                 {
                     IsSuccess = false,
-                    Message = "Lỗi khi lấy Id người dùng"
+                    Message = "Lỗi khi lấy Id người dùng",
+                    Data = new ResponseUserProfileDTO()
                 };
             }
             if (request.DateOfBirth.HasValue)
@@ -195,10 +196,27 @@ namespace EcoTokenSystem.Application.Services
 
              dbContext.Update(userDomain);
             await dbContext.SaveChangesAsync();
-            return new ResponseDTO()
+
+            // Trả về dữ liệu user mới sau khi update
+            var updatedData = new ResponseUserProfileDTO()
+            {
+                Username = userDomain.Username,
+                Name = userDomain.Name,
+                DateOfBirth = userDomain.DateOfBirth,
+                Gender = userDomain.Gender,
+                PhoneNumber = userDomain.PhoneNumber,
+                Address = userDomain.Address,
+                RoleName = userDomain.Role?.Name ?? "User",
+                CreatedAt = userDomain.CreatedAt,
+                CurrentPoints = userDomain.CurrentPoints,
+                Streak = userDomain.Streak
+            };
+
+            return new ResponseDTO<ResponseUserProfileDTO>()
             {
                 IsSuccess = true,
-                Message = "Cập nhật thông tin thành công"
+                Message = "Cập nhật thông tin thành công",
+                Data = updatedData
             };
 
         }
@@ -283,15 +301,16 @@ namespace EcoTokenSystem.Application.Services
         }
 
         // Admin: Update user
-        public async Task<ResponseDTO> AdminUpdateUserAsync(Guid userId, AdminUpdateUserDTO request)
+        public async Task<ResponseDTO<ResponseUserProfileDTO>> AdminUpdateUserAsync(Guid userId, AdminUpdateUserDTO request)
         {
-            var userDomain = await dbContext.Users.FirstOrDefaultAsync(u => u.Id == userId);
+            var userDomain = await dbContext.Users.Include(u => u.Role).FirstOrDefaultAsync(u => u.Id == userId);
             if (userDomain == null)
             {
-                return new ResponseDTO
+                return new ResponseDTO<ResponseUserProfileDTO>
                 {
                     IsSuccess = false,
-                    Message = "Không tìm thấy user"
+                    Message = "Không tìm thấy user",
+                    Data = new ResponseUserProfileDTO()
                 };
             }
 
@@ -311,10 +330,26 @@ namespace EcoTokenSystem.Application.Services
             dbContext.Users.Update(userDomain);
             await dbContext.SaveChangesAsync();
 
-            return new ResponseDTO
+            // Trả về dữ liệu user mới sau khi update
+            var updatedData = new ResponseUserProfileDTO()
+            {
+                Username = userDomain.Username,
+                Name = userDomain.Name,
+                DateOfBirth = userDomain.DateOfBirth,
+                Gender = userDomain.Gender,
+                PhoneNumber = userDomain.PhoneNumber,
+                Address = userDomain.Address,
+                RoleName = userDomain.Role?.Name ?? "User",
+                CreatedAt = userDomain.CreatedAt,
+                CurrentPoints = userDomain.CurrentPoints,
+                Streak = userDomain.Streak
+            };
+
+            return new ResponseDTO<ResponseUserProfileDTO>
             {
                 IsSuccess = true,
-                Message = "Cập nhật user thành công"
+                Message = "Cập nhật user thành công",
+                Data = updatedData
             };
         }
 

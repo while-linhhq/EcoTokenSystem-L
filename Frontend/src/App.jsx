@@ -17,7 +17,7 @@ import Admin from './pages/Admin';
 import Leaderboard from './pages/Leaderboard';
 import './App.css';
 
-// Protected Route component
+// Protected Route component - phải được định nghĩa bên trong component có AuthProvider
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, isModerator, isAdmin, loading } = useAuth();
   const location = useLocation();
@@ -97,6 +97,108 @@ const DefaultRoute = () => {
   return <Navigate to="/home" />;
 };
 
+// AppRoutes component - chứa Router và Routes, được wrap bởi AuthProvider
+const AppRoutes = () => {
+  return (
+    <Router>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route
+          path="/home"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <Home />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/market"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <EcoMarket />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/social"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <SocialFeed />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/gift-history"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <GiftHistory />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/action-history"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <ActionHistory />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/leaderboard"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <Leaderboard />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <Profile />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/moderator"
+          element={
+            <ModeratorRoute>
+              <Layout>
+                <Moderator />
+              </Layout>
+            </ModeratorRoute>
+          }
+        />
+        <Route
+          path="/admin"
+          element={
+            <AdminRoute>
+              <Layout>
+                <Admin />
+              </Layout>
+            </AdminRoute>
+          }
+        />
+        <Route path="/" element={<DefaultRoute />} />
+      </Routes>
+    </Router>
+  );
+};
+
 function App() {
   return (
     <AuthProvider>
@@ -104,102 +206,7 @@ function App() {
         <UsersProvider>
           <ActionsProvider>
             <GiftHistoryProvider>
-              <Router>
-                <Routes>
-                  <Route path="/login" element={<Login />} />
-                  <Route
-                    path="/home"
-                    element={
-                      <ProtectedRoute>
-                        <Layout>
-                          <Home />
-                        </Layout>
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/market"
-                    element={
-                      <ProtectedRoute>
-                        <Layout>
-                          <EcoMarket />
-                        </Layout>
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/social"
-                    element={
-                      <ProtectedRoute>
-                        <Layout>
-                          <SocialFeed />
-                        </Layout>
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/gift-history"
-                    element={
-                      <ProtectedRoute>
-                        <Layout>
-                          <GiftHistory />
-                        </Layout>
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/action-history"
-                    element={
-                      <ProtectedRoute>
-                        <Layout>
-                          <ActionHistory />
-                        </Layout>
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/leaderboard"
-                    element={
-                      <ProtectedRoute>
-                        <Layout>
-                          <Leaderboard />
-                        </Layout>
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/profile"
-                    element={
-                      <ProtectedRoute>
-                        <Layout>
-                          <Profile />
-                        </Layout>
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/moderator"
-                    element={
-                      <ModeratorRoute>
-                        <Layout>
-                          <Moderator />
-                        </Layout>
-                      </ModeratorRoute>
-                    }
-                  />
-                  <Route
-                    path="/admin"
-                    element={
-                      <AdminRoute>
-                        <Layout>
-                          <Admin />
-                        </Layout>
-                      </AdminRoute>
-                    }
-                  />
-                  <Route path="/" element={<DefaultRoute />} />
-                </Routes>
-              </Router>
+              <AppRoutes />
             </GiftHistoryProvider>
           </ActionsProvider>
         </UsersProvider>

@@ -15,21 +15,17 @@ const Calendar = ({ approvedDates = [] }) => {
   // Convert approved dates to Set for quick lookup (format: YYYY-MM-DD)
   // Xử lý timezone: Backend trả về UTC, cần convert về local time để hiển thị đúng ngày
   const approvedDatesSet = useMemo(() => {
-    console.log('[Calendar] Processing approved dates:', approvedDates.length);
-    
     const dateSet = new Set();
     
-    approvedDates.forEach((date, index) => {
+    approvedDates.forEach((date) => {
       try {
         if (!date) {
-          console.warn(`[Calendar] Date ${index + 1} is empty`);
           return;
         }
         
         // Parse date từ backend (ISO string với UTC timezone)
         const d = new Date(date);
         if (isNaN(d.getTime())) {
-          console.warn(`[Calendar] Date ${index + 1} is invalid:`, date);
           return;
         }
         
@@ -40,22 +36,10 @@ const Calendar = ({ approvedDates = [] }) => {
         const day = d.getDate();
         const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
         
-        console.log(`[Calendar] Date ${index + 1}:`, {
-          original: date,
-          parsed: dateStr,
-          localTime: `${year}-${month + 1}-${day}`
-        });
-        
         dateSet.add(dateStr);
       } catch (error) {
-        console.warn(`[Calendar] Error parsing date ${index + 1}:`, date, error);
+        // Silent fail - chỉ log error nếu cần debug
       }
-    });
-    
-    console.log('[Calendar] Approved dates set:', {
-      total: approvedDates.length,
-      unique: dateSet.size,
-      dates: Array.from(dateSet)
     });
     
     return dateSet;

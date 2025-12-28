@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { loginApi, logoutApi, getCurrentUserApi, updateUserApi, changePasswordApi } from '../api/authApi';
 
 const AuthContext = createContext();
@@ -103,6 +103,7 @@ export const AuthProvider = ({ children }) => {
         if (!userToSave.token || userToSave.token === null || userToSave.token === undefined) {
           console.error('[AuthContext] CRITICAL: Token is null/undefined in userToSave!');
           // Force set token từ biến đã validate
+          console.log('Token user', userToSave.token);
           userToSave.token = token;
         }
         
@@ -184,24 +185,58 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem('user', JSON.stringify(userData));
   };
 
-  const updateUser = async (updatedData) => {
+  const updateUser = useCallback(async (updatedData) => {
     try {
-      if (!user?.id) {
-        const updatedUser = { ...user, ...updatedData };
+      // CRITICAL: Lấy token từ user hiện tại hoặc localStorage trước khi update
+      const currentToken = user?.token || (() => {
+        try {
+          const storedUser = localStorage.getItem('user');
+          if (storedUser) {
+            const parsed = JSON.parse(storedUser);
+            return parsed.token || null;
+          }
+        } catch {
+          return null;
+        }
+        return null;
+      })();
+
+      const currentUserId = user?.id || user?.userId;
+
+      if (!currentUserId) {
+        // Nếu không có user.id, chỉ merge data và giữ token
+        const updatedUser = {
+          ...(user || {}),
+          ...updatedData,
+          token: currentToken || user?.token, // Đảm bảo giữ lại token
+          id: user?.id || user?.userId,
+          userId: user?.userId || user?.id
+        };
         setUser(updatedUser);
         localStorage.setItem('user', JSON.stringify(updatedUser));
         return { success: true };
       }
-      const response = await updateUserApi(user.id, updatedData);
+
+      const response = await updateUserApi(currentUserId, updatedData);
       if (response.success) {
-        setUser(response.data);
-        localStorage.setItem('user', JSON.stringify(response.data));
+        // CRITICAL: Backend không trả về token, nên phải giữ lại từ user hiện tại
+        const updatedUserData = {
+          ...response.data,
+          // QUAN TRỌNG: Giữ lại token và id từ user hiện tại
+          token: currentToken || user?.token, // Backend không trả về token
+          id: currentUserId || response.data.id || response.data.userId,
+          userId: currentUserId || response.data.userId || response.data.id
+        };
+
+        setUser(updatedUserData);
+        localStorage.setItem('user', JSON.stringify(updatedUserData));
         return { success: true, message: response.message };
       }
     } catch (error) {
       return { success: false, message: error.message };
     }
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, user?.userId, user?.token]);
 
   const changePassword = async (oldPassword, newPassword) => {
     try {

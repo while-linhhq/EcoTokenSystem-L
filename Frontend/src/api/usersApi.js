@@ -187,13 +187,42 @@ export const updateUserApi = async (userId, updatedData) => {
     const response = await apiPatch(`/User/${userId}`, backendData, true); // Cần auth (Admin)
 
     if (response.success) {
+      // Backend trả về ResponseDTO<ResponseUserProfileDTO> với Data chứa user mới
+      let userData = null;
+      
+      // Kiểm tra response.data (có thể là ResponseDTO format hoặc data trực tiếp)
+      if (response.data) {
+        // Nếu response.data có Data (uppercase) - ResponseDTO format
+        if (response.data.Data) {
+          userData = mapUserResponse(response.data.Data);
+        }
+        // Nếu response.data có data (lowercase) - ResponseDTO format
+        else if (response.data.data) {
+          userData = mapUserResponse(response.data.data);
+        }
+        // Nếu response.data là ResponseUserProfileDTO trực tiếp
+        else {
+          userData = mapUserResponse(response.data);
+        }
+      }
+      
+      // Nếu không có data, merge với updatedData và userId
+      if (!userData) {
+        userData = {
+          ...updatedData,
+          id: userId,
+          userId: userId
+        };
+      } else {
+        // Đảm bảo có id và userId
+        userData.id = userId;
+        userData.userId = userId;
+      }
+      
       return {
         success: true,
         message: response.message || 'Cập nhật user thành công',
-        data: {
-          ...updatedData,
-          id: userId
-        }
+        data: userData
       };
     }
 

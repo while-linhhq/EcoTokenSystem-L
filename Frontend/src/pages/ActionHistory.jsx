@@ -25,7 +25,7 @@ const ActionHistory = () => {
         // Không hiển thị lỗi cho user, chỉ log
       }
     };
-    
+
     if (user?.id) {
       refreshUserData();
     }
@@ -67,7 +67,7 @@ const ActionHistory = () => {
   const totalRewards = {
     ecoTokens: approvedActions.reduce((sum, action) => sum + (action?.rewards?.ecoTokens || action?.awardedPoints || 0), 0)
   };
-  
+
   // Tính số ngày unique có action được approve (chỉ để tham khảo, không phải streak thực tế)
   const uniqueApprovedDates = new Set(
     approvedActions
@@ -137,19 +137,13 @@ const ActionHistory = () => {
           <div className="stat-value">{approvedActions.length}</div>
         </div>
         <div className="stat-card rewards-stat">
-          <div className="stat-label">Tổng điểm thưởng</div>
-          <div className="stat-value">
-            🪙 {totalRewards.ecoTokens} Tokens<br />
-            <span style={{ fontSize: '0.85em', opacity: 0.8 }}>
-              ({uniqueApprovedDates.size} ngày có bài được duyệt)
-            </span>
-          </div>
+          <div className="stat-label">Tổng thưởng</div>
+          <div className="stat-value">🪙 {totalRewards.ecoTokens}</div>
         </div>
         <div className="stat-card current-stats">
-          <div className="stat-label">Số hiện tại</div>
+          <div className="stat-label">Hiện tại</div>
           <div className="stat-value">
-            🔥 {user?.streak || 0} Streak<br />
-            🪙 {user?.ecoTokens || user?.currentPoints || 0} Tokens
+            🔥 {user?.streak || 0} • 🪙 {user?.ecoTokens || user?.currentPoints || 0}
           </div>
         </div>
       </div>

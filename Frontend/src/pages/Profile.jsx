@@ -25,6 +25,8 @@ const Profile = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [passwordSuccess, setPasswordSuccess] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState('');
 
   // Refresh user data khi vào trang để đồng bộ tokens và streak với database
   useEffect(() => {
@@ -39,7 +41,7 @@ const Profile = () => {
         // Không hiển thị lỗi cho user, chỉ log
       }
     };
-    
+
     if (user?.id) {
       refreshUserData();
     }
@@ -47,11 +49,33 @@ const Profile = () => {
 
   useEffect(() => {
     if (user) {
-      setNickname(user.nickname || user.name || '');
-      setFullName(user.fullName || '');
+      // Database chỉ có field 'Name', không có 'FullName'
+      // Nếu user có fullName thì dùng, không thì dùng name làm fullName
+      const userFullName = user.fullName || user.name || '';
+      const userNickname = user.nickname || user.name || '';
+      
+      setNickname(userNickname);
+      setFullName(userFullName);
       setEmail(user.email || '');
       setPhone(user.phone || user.phoneNumber || '');
-      setDateOfBirth(user.dateOfBirth || '');
+      
+      // Convert dateOfBirth từ ISO format (2012-01-14T00:00:00) sang yyyy-MM-dd cho input type="date"
+      let formattedDate = '';
+      if (user.dateOfBirth) {
+        try {
+          const date = new Date(user.dateOfBirth);
+          if (!isNaN(date.getTime())) {
+            formattedDate = date.toISOString().split('T')[0]; // Format: yyyy-MM-dd
+          }
+        } catch (error) {
+          // Nếu không parse được, thử lấy trực tiếp nếu đã đúng format
+          if (typeof user.dateOfBirth === 'string' && user.dateOfBirth.match(/^\d{4}-\d{2}-\d{2}$/)) {
+            formattedDate = user.dateOfBirth;
+          }
+        }
+      }
+      setDateOfBirth(formattedDate);
+      
       setGender(user.gender || 'Khác'); // Default value nếu không có
       setAddress(user.address || '');
       setNotifications(user.notifications ?? true);
@@ -98,34 +122,63 @@ const Profile = () => {
   const handleSave = async () => {
     // Validate required fields trước khi gửi
     if (!nickname || nickname.trim() === '') {
+      setSaveMessage('');
       alert('Vui lòng nhập nickname (tên hiển thị)');
       return;
     }
 
     if (!gender || gender.trim() === '') {
+      setSaveMessage('');
       alert('Vui lòng chọn giới tính');
       return;
     }
 
-    const updatedData = {
-      name: nickname || user.nickname || user.name, // Backend yêu cầu 'name' field
-      nickname: nickname || user.nickname,
-      fullName: fullName || user.fullName,
-      email: email || user.email,
-      phone: phone || user.phone,
-      phoneNumber: phone || user.phone, // Backend yêu cầu 'phoneNumber' field
-      dateOfBirth: dateOfBirth || user.dateOfBirth,
-      gender: gender || user.gender,
-      address: address || user.address,
-      notifications,
-      avatar: avatarType === 'image' ? (avatarImage ? '🖼️' : avatar) : avatar,
-      avatarImage: avatarType === 'image' ? avatarImage : null
-    };
-    const result = await updateUser(updatedData);
-    if (result.success) {
-      alert(result.message || 'Đã lưu thay đổi!');
-    } else {
-      alert(result.message || 'Có lỗi xảy ra khi lưu thay đổi');
+    setSaving(true);
+    setSaveMessage('');
+
+    try {
+      // Ưu tiên "Họ và tên" (fullName) làm name, nếu không có thì dùng "Nickname"
+      // Database chỉ có field 'Name', không có 'FullName'
+      const nameToSave = fullName.trim() || nickname.trim() || user.fullName || user.nickname || user.name || '';
+      
+      const updatedData = {
+        name: nameToSave, // Backend yêu cầu 'name' field - dùng fullName nếu có, không thì dùng nickname
+        nickname: nickname.trim() || user.nickname || nameToSave, // Giữ nickname để hiển thị
+        fullName: fullName.trim() || user.fullName || '', // Giữ fullName ở frontend để hiển thị
+        email: email.trim() || user.email || '',
+        phone: phone.trim() || user.phone || '',
+        phoneNumber: phone.trim() || user.phone || user.phoneNumber || '', // Backend yêu cầu 'phoneNumber' field
+        dateOfBirth: dateOfBirth || user.dateOfBirth || null,
+        gender: gender || user.gender || 'Khác',
+        address: address.trim() || user.address || '',
+        notifications,
+        avatar: avatarType === 'image' ? (avatarImage ? '🖼️' : avatar) : avatar,
+        avatarImage: avatarType === 'image' ? avatarImage : null
+      };
+
+      const result = await updateUser(updatedData);
+      
+      if (result.success) {
+        setSaveMessage('success');
+        // Form sẽ tự động cập nhật thông qua useEffect khi user state thay đổi
+        setTimeout(() => {
+          setSaveMessage('');
+        }, 3000);
+      } else {
+        setSaveMessage('error');
+        alert(result.message || 'Có lỗi xảy ra khi lưu thay đổi');
+        setTimeout(() => {
+          setSaveMessage('');
+        }, 5000);
+      }
+    } catch (error) {
+      setSaveMessage('error');
+      alert('Có lỗi xảy ra: ' + (error.message || 'Lỗi không xác định'));
+      setTimeout(() => {
+        setSaveMessage('');
+      }, 5000);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -140,8 +193,9 @@ const Profile = () => {
       return;
     }
 
-    if (newPassword.length < 6) {
-      setPasswordError('Mật khẩu mới phải có ít nhất 6 ký tự');
+    // Backend yêu cầu MinLength(8) cho NewPassword
+    if (newPassword.length < 8) {
+      setPasswordError('Mật khẩu mới phải có ít nhất 8 ký tự');
       return;
     }
 
@@ -445,8 +499,23 @@ const Profile = () => {
         </div>
 
         <div className="profile-actions">
-          <button className="save-btn" onClick={handleSave}>
-            Lưu thay đổi
+          {saveMessage === 'success' && (
+            <div className="success-message" style={{ marginBottom: '10px', padding: '10px', borderRadius: '5px', backgroundColor: '#d4edda', color: '#155724', border: '1px solid #c3e6cb' }}>
+              ✅ Đã lưu thay đổi thành công!
+            </div>
+          )}
+          {saveMessage === 'error' && (
+            <div className="error-message" style={{ marginBottom: '10px', padding: '10px', borderRadius: '5px', backgroundColor: '#f8d7da', color: '#721c24', border: '1px solid #f5c6cb' }}>
+              ❌ Có lỗi xảy ra khi lưu thay đổi
+            </div>
+          )}
+          <button 
+            className="save-btn" 
+            onClick={handleSave}
+            disabled={saving}
+            style={{ opacity: saving ? 0.6 : 1, cursor: saving ? 'not-allowed' : 'pointer' }}
+          >
+            {saving ? '⏳ Đang lưu...' : '💾 Lưu thay đổi'}
           </button>
           <button className="logout-btn" onClick={handleLogout}>
             Đăng xuất

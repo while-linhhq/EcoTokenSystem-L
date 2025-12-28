@@ -232,9 +232,12 @@ export const updateUserApi = async (userId, updatedData) => {
       dateOfBirth = new Date().toISOString().split('T')[0];
     }
 
-    // Lấy Name - ưu tiên: updatedData.name > updatedData.nickname > currentUser.name/Name > currentUser.nickname > default
-    const name = updatedData.name || 
+    // Lấy Name - ưu tiên: updatedData.fullName > updatedData.name > updatedData.nickname > currentUser.fullName > currentUser.name/Name > currentUser.nickname > default
+    // Database chỉ có field 'Name', không có 'FullName', nên cần map fullName vào name
+    const name = updatedData.fullName ||
+                 updatedData.name ||
                  updatedData.nickname || 
+                 currentUser.fullName ||
                  currentUser.name || 
                  currentUser.Name || 
                  currentUser.nickname || 
@@ -271,13 +274,38 @@ export const updateUserApi = async (userId, updatedData) => {
     const response = await apiPatch('/User/me', backendData, true);
 
     if (response.success) {
-      // Lấy lại thông tin user sau khi update
-      const userResponse = await getCurrentUserApi();
-      if (userResponse.success) {
+      // Backend trả về ResponseDTO<ResponseUserProfileDTO> với Data chứa user mới
+      let userData = null;
+
+      // Kiểm tra response.data (có thể là ResponseDTO format hoặc data trực tiếp)
+      if (response.data) {
+        // Nếu response.data có Data (uppercase) - ResponseDTO format
+        if (response.data.Data) {
+          userData = mapUserResponse(response.data.Data);
+        }
+        // Nếu response.data có data (lowercase) - ResponseDTO format
+        else if (response.data.data) {
+          userData = mapUserResponse(response.data.data);
+        }
+        // Nếu response.data là ResponseUserProfileDTO trực tiếp
+        else {
+          userData = mapUserResponse(response.data);
+        }
+      }
+
+      // Nếu không có data trong response, gọi lại getCurrentUserApi để lấy dữ liệu mới
+      if (!userData) {
+        const userResponse = await getCurrentUserApi();
+        if (userResponse.success) {
+          userData = userResponse.data;
+        }
+      }
+
+      if (userData) {
         return {
           success: true,
           message: response.message || 'Cập nhật thông tin thành công',
-          data: userResponse.data
+          data: userData
         };
       }
     }
@@ -297,10 +325,12 @@ export const updateUserApi = async (userId, updatedData) => {
  */
 export const changePasswordApi = async (userId, oldPassword, newPassword) => {
   try {
+    // Backend DTO yêu cầu PascalCase và MinLength(8) cho NewPassword
+    // Gửi đúng format để tránh 400 Bad Request
     const response = await apiPost('/User/change-password', {
-      oldPassword: oldPassword,
-      newPassword: newPassword,
-      newPasswordConfirm: newPassword // Backend yêu cầu confirm
+      OldPassword: oldPassword,
+      NewPassword: newPassword,
+      NewPasswordConfirm: newPassword // Backend yêu cầu confirm và Compare với NewPassword
     }, true); // Cần auth
 
     if (response.success) {
