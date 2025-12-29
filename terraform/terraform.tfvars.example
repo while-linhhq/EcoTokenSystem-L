@@ -1,0 +1,32 @@
+# ============================================
+# TERRAFORM VARIABLES CONFIGURATION
+# ============================================
+# Copy this file to terraform.tfvars and fill in your values
+# DO NOT commit terraform.tfvars to git (it's in .gitignore)
+
+# AWS Region
+aws_region = "us-east-1"
+
+# RDS Configuration
+db_instance_class      = "db.t3.micro"      # Cheapest: db.t3.micro (~$25/month)
+db_allocated_storage   = 20                 # Minimum 20 GB
+db_max_allocated_storage = 50               # Max autoscaling
+db_master_username     = "sa"               # SQL Server admin user
+db_master_password     = "YourSecurePassword123!"  # CHANGE THIS! Min 8 chars
+
+# ECS Configuration
+ecs_task_cpu    = "256"   # 256 = 0.25 vCPU (minimum)
+ecs_task_memory = "512"   # 512 MB (minimum)
+
+# Application Configuration
+jwt_secret = "YourJWTSecretKeyMinimum25CharactersLong!"  # CHANGE THIS! Min 25 chars
+
+# ECR Repository
+ecr_repository_name = "ecotokensystem-backend"
+
+# S3 Bucket for Frontend (must be globally unique)
+s3_bucket_name = "ecotokensystem"  # CHANGE THIS! Must be unique globally
+
+# Optional: ACM Certificate ARN for HTTPS
+# Uncomment and add your certificate ARN if you have one
+# acm_certificate_arn = "arn:aws:acm:us-east-1:123456789012:certificate/..."
