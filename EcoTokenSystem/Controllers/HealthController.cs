@@ -4,12 +4,23 @@ using EcoTokenSystem.Infrastructure.Data;
 
 namespace EcoTokenSystem.API.Controllers
 {
+    public class DatabaseHealthStatus
+    {
+        public string Status { get; set; } = string.Empty;
+        public string Message { get; set; } = string.Empty;
+        public DateTime Timestamp { get; set; }
+    }
+
     [ApiController]
     [Route("api/[controller]")]
     public class HealthController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
         private readonly ILogger<HealthController> _logger;
+        private static DateTime _lastDbCheck = DateTime.MinValue;
+        private static DatabaseHealthStatus? _cachedDbStatus = null;
+        private static readonly TimeSpan _cacheExpiration = TimeSpan.FromSeconds(10);
+        private static readonly object _cacheLock = new object();
 
         public HealthController(ApplicationDbContext context, ILogger<HealthController> logger)
         {
@@ -27,7 +38,7 @@ namespace EcoTokenSystem.API.Controllers
                 database = await CheckDatabaseConnection()
             };
 
-            if (healthStatus.database.status == "connected")
+            if (healthStatus.database.Status == "connected")
             {
                 return Ok(healthStatus);
             }
@@ -41,7 +52,7 @@ namespace EcoTokenSystem.API.Controllers
         public async Task<IActionResult> CheckDatabase()
         {
             var dbStatus = await CheckDatabaseConnection();
-            if (dbStatus.status == "connected")
+            if (dbStatus.Status == "connected")
             {
                 return Ok(dbStatus);
             }
@@ -51,44 +62,77 @@ namespace EcoTokenSystem.API.Controllers
             }
         }
 
-        private async Task<object> CheckDatabaseConnection()
+        private async Task<DatabaseHealthStatus> CheckDatabaseConnection()
         {
+            // Return cached status if still valid
+            lock (_cacheLock)
+            {
+                if (_cachedDbStatus != null && DateTime.UtcNow - _lastDbCheck < _cacheExpiration)
+                {
+                    return _cachedDbStatus;
+                }
+            }
+
             try
             {
-                // Kiểm tra kết nối database bằng cách thực hiện một query đơn giản
-                var canConnect = await _context.Database.CanConnectAsync();
-                
+                // Use a simple and fast query with timeout
+                var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+                var canConnect = await _context.Database.CanConnectAsync(cts.Token);
+
+                DatabaseHealthStatus status;
                 if (canConnect)
                 {
-                    // Thực hiện một query đơn giản để đảm bảo database thực sự hoạt động
-                    await _context.Database.ExecuteSqlRawAsync("SELECT 1");
-                    
-                    return new
+                    status = new DatabaseHealthStatus
                     {
-                        status = "connected",
-                        message = "Database connection successful",
-                        timestamp = DateTime.UtcNow
+                        Status = "connected",
+                        Message = "Database connection successful",
+                        Timestamp = DateTime.UtcNow
                     };
                 }
                 else
                 {
-                    return new
+                    status = new DatabaseHealthStatus
                     {
-                        status = "disconnected",
-                        message = "Cannot connect to database",
-                        timestamp = DateTime.UtcNow
+                        Status = "disconnected",
+                        Message = "Cannot connect to database",
+                        Timestamp = DateTime.UtcNow
                     };
                 }
+
+                // Cache the result
+                lock (_cacheLock)
+                {
+                    _cachedDbStatus = status;
+                    _lastDbCheck = DateTime.UtcNow;
+                }
+
+                return status;
+            }
+            catch (OperationCanceledException)
+            {
+                _logger.LogWarning("Database connection check timed out");
+                var status = new DatabaseHealthStatus
+                {
+                    Status = "timeout",
+                    Message = "Database connection check timed out",
+                    Timestamp = DateTime.UtcNow
+                };
+
+                // Don't cache timeout errors
+                return status;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Database connection check failed");
-                return new
+                var status = new DatabaseHealthStatus
                 {
-                    status = "error",
-                    message = ex.Message,
-                    timestamp = DateTime.UtcNow
+                    Status = "error",
+                    Message = ex.Message,
+                    Timestamp = DateTime.UtcNow
                 };
+
+                // Don't cache errors
+                return status;
             }
         }
     }

@@ -72,17 +72,16 @@ namespace EcoTokenSystem
             // Add services to the container.
             var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
 
-            // add service CORS in container
+            // add service CORS in container - Allow all origins for simplicity
             builder.Services.AddCors(options =>
             {
                 options.AddPolicy(name: MyAllowSpecificOrigins,
                                   policy =>
                                   {
-                                      // port 5173)
-                                      policy.WithOrigins("http://localhost:5173")
+                                      policy.AllowAnyOrigin()  // Allow all origins
                                             .AllowAnyHeader()
-                                            .AllowAnyMethod()
-                                            .AllowCredentials(); //   cookie or header JWT
+                                            .AllowAnyMethod();
+                                      // Note: AllowCredentials() removed because it cannot be used with AllowAnyOrigin()
                                   });
             });
 
@@ -316,8 +315,6 @@ namespace EcoTokenSystem
                     c.RoutePrefix = string.Empty; // Để trống giúp vào thẳng Swagger khi truy cập http://localhost:5109
                 });
             }
-
-            app.UseHttpsRedirection();
 
             // Serve static files (images, css, js, etc.) từ wwwroot
             // Phải đặt TRƯỚC UseCors để CORS headers được apply cho static files

@@ -1,0 +1,178 @@
+name: Deploy to AWS
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+env:
+  AWS_REGION: us-east-1
+
+jobs:
+  deploy:
+    name: Build and Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      # ============================================
+      # CHECKOUT CODE
+      # ============================================
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # ============================================
+      # CONFIGURE AWS CREDENTIALS
+      # ============================================
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      # ============================================
+      # LOGIN TO ECR
+      # ============================================
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      # ============================================
+      # BUILD AND PUSH BACKEND IMAGE
+      # ============================================
+      - name: Build and push backend Docker image
+        id: build-backend
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          # Build Docker image
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
+            -f EcoTokenSystem/Dockerfile .
+
+          # Tag as latest
+          docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
+            $ECR_REGISTRY/$ECR_REPOSITORY:latest
+
+          # Push both tags
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+
+          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+      # ============================================
+      # UPDATE ECS TASK DEFINITION
+      # ============================================
+      - name: Download current task definition
+        run: |
+          aws ecs describe-task-definition \
+            --task-definition ecotokensystem-backend \
+            --query taskDefinition > task-definition.json
+
+      - name: Update task definition with new image
+        id: task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: task-definition.json
+          container-name: ecotokensystem-backend
+          image: ${{ steps.build-backend.outputs.image }}
+
+      # ============================================
+      # DEPLOY TO ECS
+      # ============================================
+      - name: Deploy to Amazon ECS
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        with:
+          task-definition: ${{ steps.task-def.outputs.task-definition }}
+          service: ecotokensystem-backend-service
+          cluster: ecotokensystem-cluster
+          wait-for-service-stability: true
+
+      # ============================================
+      # BUILD FRONTEND
+      # ============================================
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: Frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: ./Frontend
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: ./Frontend
+        env:
+          VITE_API_BASE_URL: ${{ secrets.API_URL }}
+        run: npm run build
+
+      # ============================================
+      # DEPLOY FRONTEND TO S3
+      # ============================================
+      - name: Sync frontend to S3
+        run: |
+          # Upload static assets with long cache
+          aws s3 sync Frontend/dist/ s3://${{ secrets.S3_BUCKET }} \
+            --delete \
+            --cache-control "public, max-age=31536000, immutable" \
+            --exclude "*.html" \
+            --exclude "*.json"
+
+          # Upload HTML files with no cache
+          aws s3 sync Frontend/dist/ s3://${{ secrets.S3_BUCKET }} \
+            --exclude "*" \
+            --include "*.html" \
+            --include "*.json" \
+            --cache-control "no-cache, no-store, must-revalidate"
+
+      # ============================================
+      # INVALIDATE CLOUDFRONT CACHE
+      # ============================================
+      - name: Invalidate CloudFront cache
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} \
+            --paths "/*"
+
+      # ============================================
+      # HEALTH CHECK
+      # ============================================
+      - name: Wait and health check
+        run: |
+          echo "Waiting 30 seconds for deployment to stabilize..."
+          sleep 30
+
+          echo "Running health check..."
+          for i in {1..10}; do
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" ${{ secrets.API_URL }}/api/health || echo "000")
+            echo "Attempt $i: Health check returned HTTP $HTTP_CODE"
+
+            if [ "$HTTP_CODE" = "200" ]; then
+              echo "✅ Health check passed!"
+              exit 0
+            fi
+
+            if [ $i -lt 10 ]; then
+              echo "Retrying in 10 seconds..."
+              sleep 10
+            fi
+          done
+
+          echo "❌ Health check failed after 10 attempts"
+          exit 1
+
+      # ============================================
+      # DEPLOYMENT SUMMARY
+      # ============================================
+      - name: Deployment summary
+        if: success()
+        run: |
+          echo "🎉 Deployment successful!"
+          echo "Backend Image: ${{ steps.build-backend.outputs.image }}"
+          echo "API URL: ${{ secrets.API_URL }}"
+          echo "Frontend URL: https://${{ secrets.S3_BUCKET }}.s3.amazonaws.com"
+          echo "Git SHA: ${{ github.sha }}"
