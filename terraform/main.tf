@@ -327,9 +327,9 @@ resource "aws_ecs_task_definition" "backend" {
       healthCheck = {
         command     = ["CMD-SHELL", "curl -f http://localhost:8080/api/health || exit 1"]
         interval    = 30
-        timeout     = 5
-        retries     = 3
-        startPeriod = 60
+        timeout     = 15       # Increased from 5 to 15 - allow time for DB queries
+        retries     = 5        # Increased from 3 to 5 - more tolerant of transient issues
+        startPeriod = 120      # Increased from 60 to 120 - more time for startup/migrations
       }
 
       logConfiguration = {
@@ -378,8 +378,8 @@ resource "aws_lb_target_group" "backend" {
     protocol            = "HTTP"
     port                = "8080"
     healthy_threshold   = 2
-    unhealthy_threshold = 5      # Increased from 3 to 5 - more tolerant of slow DB queries
-    timeout             = 10     # Increased from 5 to 10 - allow time for database check
+    unhealthy_threshold = 10     # Increased from 5 to 10 - more tolerant of slow DB queries
+    timeout             = 20     # Increased from 10 to 20 - allow time for database check
     interval            = 30
     matcher             = "200"
   }
@@ -424,7 +424,7 @@ resource "aws_ecs_service" "backend" {
   name            = "ecotokensystem-backend-service"
   cluster         = aws_ecs_cluster.main.id
   task_definition = aws_ecs_task_definition.backend.arn
-  desired_count   = 1
+  desired_count   = 2  # Run 2 tasks for high availability
   launch_type     = "FARGATE"
 
   network_configuration {
@@ -439,10 +439,10 @@ resource "aws_ecs_service" "backend" {
     container_port   = 8080
   }
 
-  deployment_minimum_healthy_percent = 0    # Allow stopping old task before starting new one
-  deployment_maximum_percent         = 100
+  deployment_minimum_healthy_percent = 100  # Keep old task running until new one is healthy
+  deployment_maximum_percent         = 200  # Allow 2 tasks during deployment
 
-  health_check_grace_period_seconds = 180  # 3 minutes for database migrations
+  health_check_grace_period_seconds = 240   # 4 minutes for database migrations and startup
 
   depends_on = [aws_lb_listener.http]
 
