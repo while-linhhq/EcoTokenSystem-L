@@ -97,6 +97,7 @@ namespace EcoTokenSystem
             builder.Services.AddScoped<IConfigInterface, ConfigService>();
             builder.Services.AddScoped<ILikeInterface, LikeService>();
             builder.Services.AddScoped<ICommentInterface, CommentService>();
+            builder.Services.AddScoped<IStoryInterface, StoryService>();
             // Add services to the container.
             var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
 

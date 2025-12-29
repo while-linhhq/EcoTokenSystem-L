@@ -45,5 +45,8 @@ namespace EcoTokenSystem.Domain.Entities
         // Like and Comment relationships
         public ICollection<Like> Likes { get; set; } = new List<Like>();
         public ICollection<Comment> Comments { get; set; } = new List<Comment>();
+
+        // Story relationship
+        public ICollection<Story> Stories { get; set; } = new List<Story>();
     }
 }

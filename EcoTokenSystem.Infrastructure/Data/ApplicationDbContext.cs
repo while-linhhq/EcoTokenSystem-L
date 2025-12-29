@@ -41,6 +41,7 @@ namespace EcoTokenSystem.Infrastructure.Data
         public DbSet<Config> Configs { get; set; }
         public DbSet<Like> Likes { get; set; }
         public DbSet<Comment> Comments { get; set; }
+        public DbSet<Story> Stories { get; set; }
 
         private static string HashPassword(string password)
         {
@@ -131,6 +132,21 @@ namespace EcoTokenSystem.Infrastructure.Data
                 .WithMany(u => u.Comments)
                 .HasForeignKey(c => c.UserId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            // Story relationships
+            modelBuilder.Entity<Story>()
+                .HasOne(s => s.User)
+                .WithMany(u => u.Stories)
+                .HasForeignKey(s => s.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Configure Viewers as JSON column
+            modelBuilder.Entity<Story>()
+                .Property(s => s.Viewers)
+                .HasConversion(
+                    v => System.Text.Json.JsonSerializer.Serialize(v, (System.Text.Json.JsonSerializerOptions)null),
+                    v => System.Text.Json.JsonSerializer.Deserialize<List<Guid>>(v, (System.Text.Json.JsonSerializerOptions)null) ?? new List<Guid>()
+                );
 
             // --- 2. SEED DATA CỐ ĐỊNH (Role, Status) ---
 

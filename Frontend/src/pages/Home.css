@@ -447,6 +447,14 @@
   border-left: 4px solid #4a7c2a;
   color: #333;
   font-size: 0.95em;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.suggestion-item svg {
+  color: #4a7c2a;
+  flex-shrink: 0;
 }
 
 @media (max-width: 768px) {
