@@ -33,9 +33,11 @@ const normalizeImageUrl = (imageUrl) => {
 const mapPostResponse = (backendPost) => {
   const imageUrl = normalizeImageUrl(backendPost.ImageUrl || backendPost.imageUrl || '');
   
-  // Map user avatar - normalize image URL nếu có
+  // Map user avatar - nếu là base64 thì giữ nguyên, nếu là URL path thì normalize
   const userAvatarImage = backendPost.UserAvatarImage || backendPost.userAvatarImage;
-  const normalizedUserAvatarImage = userAvatarImage ? normalizeImageUrl(userAvatarImage) : null;
+  const normalizedUserAvatarImage = userAvatarImage 
+    ? (userAvatarImage.startsWith('data:image') ? userAvatarImage : normalizeImageUrl(userAvatarImage))
+    : null;
   
   // Generate emoji avatar từ userName nếu không có avatar
   const userName = backendPost.UserName || backendPost.userName || 'Người dùng';
@@ -60,7 +62,16 @@ const mapPostResponse = (backendPost) => {
     userAvatarImage: normalizedUserAvatarImage, // Image avatar URL
     // Like and Comment information
     likesCount: backendPost.LikesCount || backendPost.likesCount || 0,
-    comments: backendPost.Comments || backendPost.comments || [],
+    comments: (backendPost.Comments || backendPost.comments || []).map(comment => ({
+      id: comment.Id || comment.id,
+      postId: comment.PostId || comment.postId,
+      userId: comment.UserId || comment.userId,
+      userName: comment.UserName || comment.userName || 'Người dùng',
+      userAvatar: comment.UserAvatar || comment.userAvatar || generateAvatarEmoji(comment.UserName || comment.userName),
+      userAvatarImage: comment.UserAvatarImage || comment.userAvatarImage || null,
+      content: comment.Content || comment.content,
+      createdAt: comment.CreatedAt || comment.createdAt
+    })),
     isLikedByCurrentUser: backendPost.IsLikedByCurrentUser || backendPost.isLikedByCurrentUser || false,
   };
 };

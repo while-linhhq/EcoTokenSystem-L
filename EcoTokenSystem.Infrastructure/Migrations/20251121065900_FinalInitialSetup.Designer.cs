@@ -156,6 +156,11 @@ namespace EcoTokenSystem.Infrastructure.Migrations
                     b.Property<Guid>("ItemId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<bool>("IsShipped")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
                     b.Property<DateTime>("RedemptionDate")
                         .HasColumnType("datetime2");
 
@@ -330,6 +335,10 @@ namespace EcoTokenSystem.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("Avatar")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -338,6 +347,10 @@ namespace EcoTokenSystem.Infrastructure.Migrations
 
                     b.Property<DateTime?>("DateOfBirth")
                         .HasColumnType("datetime2");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Gender")
                         .IsRequired()
@@ -376,9 +389,11 @@ namespace EcoTokenSystem.Infrastructure.Migrations
                         {
                             Id = new Guid("f3e09f3d-6a2a-47c1-80f1-622abce815ca"),
                             Address = "TP Hồ Chí Minh",
+                            Avatar = "🌱",
                             CreatedAt = new DateTime(2025, 11, 21, 6, 58, 59, 677, DateTimeKind.Utc).AddTicks(2209),
                             CurrentPoints = 99999,
                             DateOfBirth = new DateTime(2025, 11, 21, 6, 58, 59, 677, DateTimeKind.Utc).AddTicks(2201),
+                            Email = "",
                             Gender = "Nữ",
                             Name = "Quản trị viên Hệ thống",
                             PasswordHash = "$2a$11$QOh34GWE1pvJ1QzCEht4leqFoWINZcdFdZWpc9B5PPlmg.oTX3OwO",
@@ -391,9 +406,11 @@ namespace EcoTokenSystem.Infrastructure.Migrations
                         {
                             Id = new Guid("a3c72b9a-5d2e-4f8a-9a1c-4e1d8a2c9b6a"),
                             Address = "TP Hồ Chí Minh",
+                            Avatar = "🌱",
                             CreatedAt = new DateTime(2025, 11, 21, 6, 58, 59, 677, DateTimeKind.Utc).AddTicks(2265),
                             CurrentPoints = 1500,
                             DateOfBirth = new DateTime(2025, 11, 21, 6, 58, 59, 677, DateTimeKind.Utc).AddTicks(2264),
+                            Email = "",
                             Gender = "Nam",
                             Name = "Người dùng thử nghiệm",
                             PasswordHash = "$2a$11$YxK8vhj1T.F70B.HtsDBIOeFRDz4ONqiJ8uc8Rc32Xwy3Gy3wuCA6",

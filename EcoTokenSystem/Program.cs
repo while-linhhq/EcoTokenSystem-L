@@ -150,6 +150,22 @@ namespace EcoTokenSystem
                             logger.LogWarning($"⚠️ Không thể verify bảng Users: {verifyEx.Message}");
                         }
 
+                        // Add IsShipped column to ItemsHistory if it doesn't exist
+                        try
+                        {
+                            var columnExists = context.Database.ExecuteSqlRaw(@"
+                                IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[ItemsHistory]') AND name = 'IsShipped')
+                                BEGIN
+                                    ALTER TABLE [ItemsHistory] ADD [IsShipped] bit NOT NULL DEFAULT 0;
+                                END
+                            ");
+                            logger.LogInformation("✅ Đã kiểm tra/ thêm cột IsShipped vào bảng ItemsHistory.");
+                        }
+                        catch (Exception ex)
+                        {
+                            logger.LogWarning($"⚠️ Không thể thêm cột IsShipped vào ItemsHistory: {ex.Message}");
+                        }
+
                         // Kiểm tra và tạo bảng Likes nếu chưa tồn tại
                         try
                         {

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useActions } from '../context/ActionsContext';
 import { getCurrentUserApi } from '../api/authApi';
+import { formatDate } from '../utils/dateUtils';
 import './ActionHistory.css';
 
 const ActionHistory = () => {
@@ -80,16 +81,6 @@ const ActionHistory = () => {
       .filter(Boolean)
   );
 
-  const formatDate = (dateString) => {
-    if (!dateString) return 'Chưa có';
-    try {
-      const date = new Date(dateString);
-      if (isNaN(date.getTime())) return 'Ngày không hợp lệ';
-      return date.toLocaleString('vi-VN');
-    } catch {
-      return 'Ngày không hợp lệ';
-    }
-  };
 
   const getStatusBadge = (status) => {
     switch (status) {

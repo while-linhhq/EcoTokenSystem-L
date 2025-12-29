@@ -1,5 +1,6 @@
 import { useAuth } from '../context/AuthContext';
 import { useGiftHistory } from '../context/GiftHistoryContext';
+import { formatDate } from '../utils/dateUtils';
 import './GiftHistory.css';
 
 const GiftHistory = () => {
@@ -10,11 +11,32 @@ const GiftHistory = () => {
   // Không cần filter lại, sử dụng trực tiếp giftHistory từ context
   const history = giftHistory || [];
   const totalSpent = history.reduce((sum, item) => sum + (item.price || 0), 0);
-
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleString('vi-VN');
-  };
+  
+  // Tính số token còn lại sau mỗi lần đổi quà
+  // History được sắp xếp từ mới đến cũ (OrderByDescending)
+  // tokensAfter của item = số token sau khi đổi quà đó
+  const currentPoints = user?.currentPoints || user?.ecoTokens || 0;
+  
+  // Tính tokensAfter cho mỗi item
+  // Item đầu tiên (mới nhất): tokensAfter = currentPoints (sau khi đổi quà này, số token là currentPoints)
+  // Item tiếp theo: tokensAfter = currentPoints + price của item trước (vì đã đổi item trước nên token giảm)
+  // tokensAfter = currentPoints + tổng điểm đã đổi từ item này trở về sau (các item mới hơn hoặc bằng)
+  const historyWithTokens = history.map((item, index) => {
+    // Tính tổng điểm đã đổi từ item này trở về sau (các item mới hơn hoặc bằng, tức là từ đầu mảng đến item này)
+    // Vì history được sắp xếp từ mới đến cũ, index 0 là mới nhất
+    const pointsSpentFromThis = history.slice(0, index + 1).reduce((sum, spentItem) => sum + (spentItem.price || 0), 0);
+    // tokensAfter = currentPoints + tổng điểm đã đổi từ item này trở về sau
+    // Đây là số token trước khi đổi item này, nhưng chúng ta cần số token sau khi đổi
+    // Vậy tokensAfter = currentPoints + pointsSpentFromThis - item.price
+    // = currentPoints + (pointsSpentFromThis - item.price)
+    // = currentPoints + pointsSpentBeforeThis
+    const pointsSpentBeforeThis = history.slice(0, index).reduce((sum, spentItem) => sum + (spentItem.price || 0), 0);
+    const tokensAfter = currentPoints + pointsSpentBeforeThis;
+    return {
+      ...item,
+      tokensAfter
+    };
+  });
 
   return (
     <div className="gift-history-container">
@@ -47,7 +69,7 @@ const GiftHistory = () => {
         </div>
       ) : (
         <div className="history-list">
-          {history.map((item) => (
+          {historyWithTokens.map((item) => (
             <div key={item.id} className="history-item">
               <div className="gift-image-large">
                 {item.giftImageUrl || item.giftImage ? (
@@ -68,12 +90,10 @@ const GiftHistory = () => {
                     <span className="info-label">Thời gian:</span>
                     <span className="info-value">{formatDate(item.exchangedAt)}</span>
                   </div>
-                  {item.tokensAfter !== undefined && item.tokensAfter !== null && (
-                    <div className="info-row">
-                      <span className="info-label">Tokens còn lại:</span>
-                      <span className="info-value">🪙 {item.tokensAfter}</span>
-                    </div>
-                  )}
+                  <div className="info-row">
+                    <span className="info-label">Tokens còn lại:</span>
+                    <span className="info-value">🪙 {item.tokensAfter !== undefined && item.tokensAfter !== null ? item.tokensAfter : 0}</span>
+                  </div>
                 </div>
               </div>
               <div className="exchange-status">

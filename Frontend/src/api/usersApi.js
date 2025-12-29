@@ -7,13 +7,17 @@ import { apiGet, apiPost, apiPatch, apiDelete } from './apiClient';
  * Map UserListDTO từ backend sang format frontend
  */
 const mapUserResponse = (backendUser) => {
+  const avatar = backendUser.Avatar || backendUser.avatar || '🌱';
+  const avatarImage = (avatar && avatar.startsWith('data:image')) ? avatar : null;
   return {
     id: backendUser.Id || backendUser.id,
     userId: backendUser.Id || backendUser.id,
     username: backendUser.Username || backendUser.username,
     name: backendUser.Name || backendUser.name || '',
     nickname: backendUser.Name || backendUser.name || backendUser.Username || '',
-    email: '', // Backend không có email field
+    email: backendUser.Email || backendUser.email || '',
+    avatar: avatarImage ? '🖼️' : avatar,
+    avatarImage: avatarImage,
     phone: backendUser.PhoneNumber || backendUser.phoneNumber || '',
     phoneNumber: backendUser.PhoneNumber || backendUser.phoneNumber || '',
     address: backendUser.Address || backendUser.address || '',
@@ -23,7 +27,7 @@ const mapUserResponse = (backendUser) => {
     roleName: backendUser.RoleName || backendUser.roleName || 'User',
     roleId: backendUser.RoleId || backendUser.roleId || 1,
     currentPoints: backendUser.CurrentPoints ?? backendUser.currentPoints ?? 0,
-    ecoTokens: backendUser.CurrentPoints ?? backendUser.currentPoints ?? 0, // Tương thích
+    ecoTokens: backendUser.CurrentPoints ?? backendUser.currentPoints ?? 0,
     streak: backendUser.Streak || backendUser.streak || 0,
     createdAt: backendUser.CreatedAt || backendUser.createdAt,
   };
@@ -89,22 +93,22 @@ export const createModeratorApi = async (moderatorData) => {
     // roleId: 1 = User, 2 = Admin, 3 = Moderator
     const roleId = moderatorData.roleId || (moderatorData.role === 'moderator' ? 3 : 1);
     const username = moderatorData.email || moderatorData.username || moderatorData.nickname;
-    
+
     console.log('[createModeratorApi] Request:', { username, roleId, hasPassword: !!moderatorData.password });
-    
+
     try {
       const response = await apiPost(`/User/admin/create?roleId=${roleId}`, {
         username: username,
         password: moderatorData.password,
         passwordConfirm: moderatorData.password
       }, true); // Cần auth (Admin)
-      
+
       console.log('[createModeratorApi] Response:', response);
 
       if (response && response.success) {
         // Reload users để lấy user mới tạo
         const usersResponse = await getAllUsersApi();
-        const newUser = usersResponse.data?.find(u => 
+        const newUser = usersResponse.data?.find(u =>
           u.username === (moderatorData.email || moderatorData.username)
         );
 
@@ -189,7 +193,7 @@ export const updateUserApi = async (userId, updatedData) => {
     if (response.success) {
       // Backend trả về ResponseDTO<ResponseUserProfileDTO> với Data chứa user mới
       let userData = null;
-      
+
       // Kiểm tra response.data (có thể là ResponseDTO format hoặc data trực tiếp)
       if (response.data) {
         // Nếu response.data có Data (uppercase) - ResponseDTO format
@@ -205,7 +209,7 @@ export const updateUserApi = async (userId, updatedData) => {
           userData = mapUserResponse(response.data);
         }
       }
-      
+
       // Nếu không có data, merge với updatedData và userId
       if (!userData) {
         userData = {
@@ -218,7 +222,7 @@ export const updateUserApi = async (userId, updatedData) => {
         userData.id = userId;
         userData.userId = userId;
       }
-      
+
       return {
         success: true,
         message: response.message || 'Cập nhật user thành công',
@@ -282,7 +286,7 @@ export const searchUsersApi = async (searchTerm) => {
       user.phone?.includes(term) ||
       user.phoneNumber?.includes(term)
     );
-  } catch (error) {
+  } catch {
     return [];
   }
 };
@@ -299,41 +303,46 @@ export const getLeaderboardApi = async (sortBy = 'tokens', limit = null) => {
     if (limit !== null && limit > 0) {
       url += `&limit=${limit}`;
     }
-    
-    console.log('[getLeaderboardApi] Calling:', url);
+
     const response = await apiGet(url, false); // Public access
-    console.log('[getLeaderboardApi] Raw response:', response);
-    
+
     if (response.success && response.data) {
-      const leaderboard = Array.isArray(response.data) ? response.data : 
-                         (Array.isArray(response.Data) ? response.Data : []);
-      
-      // Map PascalCase to camelCase
+      // Backend trả về ResponseDTO<List<LeaderboardDTO>> với Data chứa list
+      // LeaderboardDTO đã có JsonPropertyName nên sẽ là camelCase
+      let leaderboard = [];
+
+      if (Array.isArray(response.data)) {
+        leaderboard = response.data;
+      } else if (response.data.Data && Array.isArray(response.data.Data)) {
+        leaderboard = response.data.Data;
+      } else if (response.data.data && Array.isArray(response.data.data)) {
+        leaderboard = response.data.data;
+      }
+
+      // Map để đảm bảo format nhất quán (backend đã có JsonPropertyName nhưng vẫn cần fallback)
       const mappedLeaderboard = leaderboard.map(entry => ({
-        userId: entry.UserId || entry.userId,
-        userName: entry.UserName || entry.userName || 'Người dùng',
-        currentPoints: entry.CurrentPoints !== undefined ? entry.CurrentPoints : (entry.currentPoints || 0),
-        streak: entry.Streak !== undefined ? entry.Streak : (entry.streak || 0),
-        rank: entry.Rank !== undefined ? entry.Rank : (entry.rank || 0)
+        userId: entry.userId || entry.UserId,
+        userName: entry.userName || entry.UserName || 'Người dùng',
+        userAvatar: entry.userAvatar || entry.UserAvatar || '🌱',
+        userAvatarImage: entry.userAvatarImage || entry.UserAvatarImage || null,
+        currentPoints: entry.currentPoints !== undefined ? entry.currentPoints : (entry.CurrentPoints || 0),
+        streak: entry.streak !== undefined ? entry.streak : (entry.Streak || 0),
+        rank: entry.rank !== undefined ? entry.rank : (entry.Rank || 0)
       }));
-      
-      console.log('[getLeaderboardApi] Mapped leaderboard:', mappedLeaderboard);
-      
+
       return {
         success: true,
         message: response.message || 'Lấy bảng xếp hạng thành công',
         data: mappedLeaderboard
       };
     }
-    
-    console.warn('[getLeaderboardApi] No data in response:', response);
+
     return {
       success: false,
       message: response.message || 'Không thể lấy bảng xếp hạng',
       data: []
     };
   } catch (error) {
-    console.error('[getLeaderboardApi] Error:', error);
     return {
       success: false,
       message: error.message || 'Không thể lấy bảng xếp hạng',

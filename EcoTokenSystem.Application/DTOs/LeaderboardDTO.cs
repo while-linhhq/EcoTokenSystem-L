@@ -11,6 +11,12 @@ namespace EcoTokenSystem.Application.DTOs
         [JsonPropertyName("userName")]
         public string UserName { get; set; } = string.Empty;
         
+        [JsonPropertyName("userAvatar")]
+        public string UserAvatar { get; set; } = string.Empty;
+        
+        [JsonPropertyName("userAvatarImage")]
+        public string? UserAvatarImage { get; set; }
+        
         [JsonPropertyName("currentPoints")]
         public int CurrentPoints { get; set; }
         

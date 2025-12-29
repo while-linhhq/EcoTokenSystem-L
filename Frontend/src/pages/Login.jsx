@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import './Login.css';
 
@@ -109,24 +109,8 @@ const Login = () => {
         </form>
 
         <p className="login-footer">
-          Chưa có tài khoản? <a href="#register">Đăng ký ngay</a>
+          Chưa có tài khoản? <Link to="/register">Đăng ký ngay</Link>
         </p>
-        <div className="moderator-hint">
-          <p><strong>📝 Tài khoản mẫu để test:</strong></p>
-          <p style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid #ddd' }}>
-            👑 Tài khoản Admin:
-          </p>
-          <p>Tên đăng nhập: <strong>admin</strong></p>
-          <p>Mật khẩu: <strong>Admin@123</strong></p>
-          <p style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid #ddd' }}>
-            🌱 Tài khoản User:
-          </p>
-          <p>Tên đăng nhập: <strong>user_test</strong></p>
-          <p>Mật khẩu: <strong>User@123</strong></p>
-          <p style={{ marginTop: '10px', fontSize: '0.9em', color: '#666' }}>
-            💡 Lưu ý: Backend chỉ hỗ trợ đăng nhập bằng tên đăng nhập (username)
-          </p>
-        </div>
       </div>
     </div>
   );

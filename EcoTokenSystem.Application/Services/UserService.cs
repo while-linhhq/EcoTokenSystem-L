@@ -154,6 +154,8 @@ namespace EcoTokenSystem.Application.Services
             {
                 Username = userDomain.Username,
                 Name = userDomain.Name,
+                Email = userDomain.Email ?? string.Empty,
+                Avatar = userDomain.Avatar ?? string.Empty,
                 DateOfBirth = userDomain.DateOfBirth,
                 Gender = userDomain.Gender,
                 PhoneNumber = userDomain.PhoneNumber,
@@ -190,6 +192,8 @@ namespace EcoTokenSystem.Application.Services
             }
 
             userDomain.Name = request.Name;
+            userDomain.Email = request.Email ?? string.Empty;
+            userDomain.Avatar = request.Avatar ?? string.Empty;
             userDomain.PhoneNumber = request.PhoneNumber;   
             userDomain.Address = request.Address;
             userDomain.Gender = request.Gender;
@@ -202,6 +206,8 @@ namespace EcoTokenSystem.Application.Services
             {
                 Username = userDomain.Username,
                 Name = userDomain.Name,
+                Email = userDomain.Email ?? string.Empty,
+                Avatar = userDomain.Avatar ?? string.Empty,
                 DateOfBirth = userDomain.DateOfBirth,
                 Gender = userDomain.Gender,
                 PhoneNumber = userDomain.PhoneNumber,
@@ -281,6 +287,8 @@ namespace EcoTokenSystem.Application.Services
                 Id = u.Id,
                 Username = u.Username,
                 Name = u.Name ?? string.Empty,
+                Email = u.Email ?? string.Empty,
+                Avatar = u.Avatar ?? string.Empty,
                 PhoneNumber = u.PhoneNumber ?? string.Empty,
                 Address = u.Address ?? string.Empty,
                 Gender = u.Gender ?? string.Empty,
@@ -316,6 +324,8 @@ namespace EcoTokenSystem.Application.Services
 
             // Update only provided fields
             if (request.Name != null) userDomain.Name = request.Name;
+            if (request.Email != null) userDomain.Email = request.Email;
+            if (request.Avatar != null) userDomain.Avatar = request.Avatar;
             if (request.PhoneNumber != null) userDomain.PhoneNumber = request.PhoneNumber;
             if (request.Address != null) userDomain.Address = request.Address;
             if (request.Gender != null) userDomain.Gender = request.Gender;
@@ -335,6 +345,8 @@ namespace EcoTokenSystem.Application.Services
             {
                 Username = userDomain.Username,
                 Name = userDomain.Name,
+                Email = userDomain.Email ?? string.Empty,
+                Avatar = userDomain.Avatar ?? string.Empty,
                 DateOfBirth = userDomain.DateOfBirth,
                 Gender = userDomain.Gender,
                 PhoneNumber = userDomain.PhoneNumber,

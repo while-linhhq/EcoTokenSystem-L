@@ -6,6 +6,7 @@ import { ConfigProvider } from './context/ConfigContext';
 import { UsersProvider } from './context/UsersContext';
 import Layout from './components/Layout';
 import Login from './pages/Login';
+import Register from './pages/Register';
 import Home from './pages/Home';
 import EcoMarket from './pages/EcoMarket';
 import Profile from './pages/Profile';
@@ -103,6 +104,7 @@ const AppRoutes = () => {
     <Router>
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
         <Route
           path="/home"
           element={

@@ -20,6 +20,7 @@ export const addItemApi = async (itemData) => {
     const formData = new FormData();
     formData.append('name', itemData.name || '');
     formData.append('requiredPoints', itemData.requiredPoints || itemData.price || 0);
+    formData.append('tag', itemData.tag || 'handmade');
 
     if (itemData.imageFile) {
       formData.append('imageItem', itemData.imageFile);
@@ -28,6 +29,7 @@ export const addItemApi = async (itemData) => {
     console.log('[addItemApi] Request:', {
       name: itemData.name,
       requiredPoints: itemData.requiredPoints || itemData.price,
+      tag: itemData.tag || 'handmade',
       hasImage: !!itemData.imageFile,
       hasToken: !!token
     });

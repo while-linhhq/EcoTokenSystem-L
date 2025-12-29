@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { getApprovedPostsApi } from '../api/postsApi';
 import { toggleLikeApi } from '../api/likesApi';
 import { createCommentApi, deleteCommentApi } from '../api/commentsApi';
+import { formatTimeAgo } from '../utils/dateUtils';
 import './SocialFeed.css';
 
 const SocialFeed = () => {
@@ -18,29 +19,6 @@ const SocialFeed = () => {
     loadPosts();
   }, []);
 
-  // Format time ago
-  const formatTimeAgo = (dateString) => {
-    if (!dateString) return 'Vừa xong';
-    try {
-      const date = new Date(dateString);
-      if (isNaN(date.getTime())) return 'Vừa xong';
-      
-      const now = new Date();
-      const diffMs = now - date;
-      const diffMins = Math.floor(diffMs / 60000);
-      const diffHours = Math.floor(diffMs / 3600000);
-      const diffDays = Math.floor(diffMs / 86400000);
-      
-      if (diffMins < 1) return 'Vừa xong';
-      if (diffMins < 60) return `${diffMins} phút trước`;
-      if (diffHours < 24) return `${diffHours} giờ trước`;
-      if (diffDays < 7) return `${diffDays} ngày trước`;
-      return date.toLocaleDateString('vi-VN');
-    } catch {
-      return 'Vừa xong';
-    }
-  };
-
   // Calculate level from streak (simple formula)
   const calculateLevel = (streak) => {
     return Math.floor(streak / 5) + 1;
@@ -49,8 +27,8 @@ const SocialFeed = () => {
   // Mock data for stories (tạm thời dùng posts đã approved)
   const stories = posts.slice(0, 4).map(post => ({
     id: post.id,
-    user: { 
-      name: post.userName || 'Người dùng', 
+    user: {
+      name: post.userName || 'Người dùng',
       avatar: post.userAvatar || '🌱',
       avatarImage: post.userAvatarImage || null
     },
@@ -142,11 +120,11 @@ const SocialFeed = () => {
     try {
       setLoading(true);
       console.log('[SocialFeed] ===== Loading approved posts =====');
-      
+
       // Test API trực tiếp để kiểm tra
       const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5109/api';
       console.log('[SocialFeed] Testing API directly:', `${API_BASE_URL}/Post?statusId=2`);
-      
+
       try {
         const testResponse = await fetch(`${API_BASE_URL}/Post?statusId=2`, {
           method: 'GET',
@@ -154,14 +132,14 @@ const SocialFeed = () => {
             'Content-Type': 'application/json'
           }
         });
-        
+
         console.log('[SocialFeed] Direct API test response:', {
           status: testResponse.status,
           statusText: testResponse.statusText,
           ok: testResponse.ok,
           contentType: testResponse.headers.get('content-type')
         });
-        
+
         if (testResponse.ok) {
           const testData = await testResponse.json();
           console.log('[SocialFeed] Direct API test data:', {
@@ -170,7 +148,7 @@ const SocialFeed = () => {
             DataType: typeof testData.Data,
             IsDataArray: Array.isArray(testData.Data),
             DataLength: Array.isArray(testData.Data) ? testData.Data.length : 'N/A',
-            SampleData: testData.Data && Array.isArray(testData.Data) && testData.Data.length > 0 
+            SampleData: testData.Data && Array.isArray(testData.Data) && testData.Data.length > 0
               ? {
                   Id: testData.Data[0].Id,
                   Title: testData.Data[0].Title,
@@ -186,20 +164,20 @@ const SocialFeed = () => {
       } catch (testError) {
         console.error('[SocialFeed] Direct API test error:', testError);
       }
-      
+
       // Gọi API qua wrapper
       const postsResponse = await getApprovedPostsApi();
-      
+
       console.log('[SocialFeed] Wrapper API Response:', {
         success: postsResponse.success,
         message: postsResponse.message,
         dataLength: postsResponse.data?.length || 0,
         dataType: Array.isArray(postsResponse.data) ? 'array' : typeof postsResponse.data
       });
-      
+
       if (postsResponse.success && postsResponse.data) {
         const postsArray = Array.isArray(postsResponse.data) ? postsResponse.data : [];
-        
+
         if (postsArray.length === 0) {
           console.warn('[SocialFeed] ===== No posts found =====');
           console.warn('[SocialFeed] This could mean:');
@@ -209,7 +187,7 @@ const SocialFeed = () => {
           setPosts([]);
           return;
         }
-        
+
         // Log sample post để debug
         console.log('[SocialFeed] Sample post:', {
           id: postsArray[0].id,
@@ -220,14 +198,14 @@ const SocialFeed = () => {
           statusId: postsArray[0].statusId,
           approvedRejectedAt: postsArray[0].approvedRejectedAt
         });
-        
+
         // Sắp xếp posts theo thời gian approve (mới nhất trước)
         const sortedPosts = [...postsArray].sort((a, b) => {
           const dateA = new Date(a.approvedRejectedAt || a.submittedAt || 0);
           const dateB = new Date(b.approvedRejectedAt || b.submittedAt || 0);
           return dateB - dateA; // Mới nhất trước
         });
-        
+
         console.log('[SocialFeed] ===== Success =====');
         console.log('[SocialFeed] Loaded and sorted posts:', sortedPosts.length);
         setPosts(sortedPosts);
@@ -304,32 +282,34 @@ const SocialFeed = () => {
               const userAvatar = post.userAvatar || '🌱';
               const userAvatarImage = post.userAvatarImage || null;
               const timeAgo = formatTimeAgo(post.approvedRejectedAt || post.submittedAt);
-              
+
               return (
                 <div key={post.id} className="post-card">
                   <div className="post-header">
                     <div className="post-user">
                       {/* Avatar - ưu tiên image, fallback về emoji */}
-                      {userAvatarImage ? (
-                        <img 
-                          src={userAvatarImage} 
-                          alt={userName} 
-                          className="user-avatar-image"
-                          onError={(e) => {
-                            // Fallback về emoji nếu image load lỗi
-                            e.target.style.display = 'none';
-                            const emojiAvatar = e.target.parentElement.querySelector('.user-avatar');
-                            if (emojiAvatar) {
-                              emojiAvatar.style.display = 'flex';
-                            }
-                          }}
-                        />
-                      ) : null}
-                      <div 
-                        className="user-avatar" 
-                        style={{ display: userAvatarImage ? 'none' : 'flex' }}
-                      >
-                        {userAvatar}
+                      <div className="user-avatar-wrapper">
+                        {userAvatarImage ? (
+                          <img
+                            src={userAvatarImage}
+                            alt={userName}
+                            className="user-avatar-image"
+                            onError={(e) => {
+                              // Fallback về emoji nếu image load lỗi
+                              e.target.style.display = 'none';
+                              const emojiAvatar = e.target.parentElement.querySelector('.user-avatar');
+                              if (emojiAvatar) {
+                                emojiAvatar.style.display = 'flex';
+                              }
+                            }}
+                          />
+                        ) : null}
+                        <div
+                          className="user-avatar"
+                          style={{ display: userAvatarImage ? 'none' : 'flex' }}
+                        >
+                          {userAvatar}
+                        </div>
                       </div>
                       <div className="user-info">
                         <div className="user-name">
@@ -344,42 +324,58 @@ const SocialFeed = () => {
                   {post.imageUrl ? (
                     <div className="post-image-container">
                       <img src={post.imageUrl} alt={post.title || 'Bài đăng'} className="post-image-real" />
+                      <div className="post-image-overlay">
+                        <div className="post-content-overlay">
+                          <h3 className="post-title">{post.title || 'Hành động xanh'}</h3>
+                          {(post.content || post.description) && (
+                            <p className="post-description">{post.content || post.description}</p>
+                          )}
+                          {post.awardedPoints > 0 && (
+                            <div className="post-reward">
+                              🪙 +{post.awardedPoints} điểm
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   ) : (
-                    <div className="post-image">🌱</div>
+                    <div className="post-image">
+                      <div className="post-content-overlay">
+                        <h3 className="post-title">{post.title || 'Hành động xanh'}</h3>
+                        {(post.content || post.description) && (
+                          <p className="post-description">{post.content || post.description}</p>
+                        )}
+                        {post.awardedPoints > 0 && (
+                          <div className="post-reward">
+                            🪙 +{post.awardedPoints} điểm
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   )}
 
-                  <div className="post-content">
-                    <h3 className="post-title">{post.title || 'Hành động xanh'}</h3>
-                    <p className="post-description">{post.content || post.description || ''}</p>
-                    {post.awardedPoints > 0 && (
-                      <div className="post-reward">
-                        🪙 +{post.awardedPoints} điểm
-                      </div>
-                    )}
+                  <div className="post-actions">
+                    <button
+                      className={`action-btn like-btn ${post.isLikedByCurrentUser ? 'liked' : ''}`}
+                      onClick={() => handleLike(post.id)}
+                      disabled={!isAuthenticated}
+                    >
+                      {post.isLikedByCurrentUser ? '❤️' : '🤍'} {post.likesCount || 0}
+                    </button>
+                    <button
+                      className="action-btn"
+                      onClick={() => toggleComments(post.id)}
+                    >
+                      💬 {post.comments?.length || 0}
+                    </button>
+                    <button className="action-btn">
+                      🔗 Chia sẻ
+                    </button>
+                  </div>
 
-                    <div className="post-actions">
-                      <button
-                        className={`action-btn like-btn ${post.isLikedByCurrentUser ? 'liked' : ''}`}
-                        onClick={() => handleLike(post.id)}
-                        disabled={!isAuthenticated}
-                      >
-                        {post.isLikedByCurrentUser ? '❤️' : '🤍'} {post.likesCount || 0}
-                      </button>
-                      <button 
-                        className="action-btn"
-                        onClick={() => toggleComments(post.id)}
-                      >
-                        💬 {post.comments?.length || 0}
-                      </button>
-                      <button className="action-btn">
-                        🔗 Chia sẻ
-                      </button>
-                    </div>
-
-                    {/* Comments Section */}
-                    {expandedComments.has(post.id) && (
-                      <div className="comments-section">
+                  {/* Comments Section */}
+                  {expandedComments.has(post.id) && (
+                    <div className="comments-section">
                         {/* Comment Input */}
                         {isAuthenticated && (
                           <div className="comment-input-container">
@@ -407,36 +403,57 @@ const SocialFeed = () => {
                         {/* Comments List */}
                         <div className="comments-list">
                           {post.comments && post.comments.length > 0 ? (
-                            post.comments.map(comment => (
-                              <div key={comment.id || comment.Id} className="comment-item">
-                                <div className="comment-content">
-                                  <strong className="comment-author">
-                                    {comment.userName || comment.UserName || 'Người dùng'}
-                                  </strong>
-                                  <span className="comment-text">{comment.content || comment.Content}</span>
+                            post.comments.map(comment => {
+                              const commentUserName = comment.userName || comment.UserName || 'Người dùng';
+                              const commentUserAvatar = comment.userAvatar || comment.UserAvatar || '🌱';
+                              const commentUserAvatarImage = comment.userAvatarImage || comment.UserAvatarImage || null;
+                              return (
+                                <div key={comment.id || comment.Id} className="comment-item">
+                                  <div className="comment-avatar">
+                                    {commentUserAvatarImage ? (
+                                      <img
+                                        src={commentUserAvatarImage}
+                                        alt={commentUserName}
+                                        className="comment-avatar-image"
+                                        onError={(e) => {
+                                          e.target.style.display = 'none';
+                                          const fallback = e.target.nextSibling;
+                                          if (fallback) fallback.style.display = 'flex';
+                                        }}
+                                      />
+                                    ) : null}
+                                    <span style={{ display: commentUserAvatarImage ? 'none' : 'flex' }}>
+                                      {commentUserAvatar}
+                                    </span>
+                                  </div>
+                                  <div className="comment-content">
+                                    <strong className="comment-author">
+                                      {commentUserName}
+                                    </strong>
+                                    <span className="comment-text">{comment.content || comment.Content}</span>
+                                    <div className="comment-footer">
+                                      <span className="comment-time">
+                                        {formatTimeAgo(comment.createdAt || comment.CreatedAt)}
+                                      </span>
+                                      {isAuthenticated && user && (comment.userId === user.id || comment.UserId === user.id) && (
+                                        <button
+                                          className="comment-delete-btn"
+                                          onClick={() => handleDeleteComment(comment.id || comment.Id, post.id)}
+                                        >
+                                          Xóa
+                                        </button>
+                                      )}
+                                    </div>
+                                  </div>
                                 </div>
-                                <div className="comment-footer">
-                                  <span className="comment-time">
-                                    {formatTimeAgo(comment.createdAt || comment.CreatedAt)}
-                                  </span>
-                                  {isAuthenticated && user && (comment.userId === user.id || comment.UserId === user.id) && (
-                                    <button
-                                      className="comment-delete-btn"
-                                      onClick={() => handleDeleteComment(comment.id || comment.Id, post.id)}
-                                    >
-                                      Xóa
-                                    </button>
-                                  )}
-                                </div>
-                              </div>
-                            ))
+                              );
+                            })
                           ) : (
                             <div className="no-comments">Chưa có bình luận nào</div>
                           )}
                         </div>
                       </div>
                     )}
-                  </div>
                 </div>
               );
             })

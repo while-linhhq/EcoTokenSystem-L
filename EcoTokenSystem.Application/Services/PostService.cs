@@ -190,7 +190,7 @@ namespace EcoTokenSystem.Application.Services
             if (request.StatusId == ApprovedStatusId) // APPROVE (2)
             {
                 _logger.LogInformation($"[ApproveRejectPostAsync] Approving post {postId}, AwardedPoints: {request.AwardedPoints}");
-                
+
                 if (request.AwardedPoints <= 0)
                 {
                     _logger.LogWarning($"[ApproveRejectPostAsync] AwardedPoints <= 0: {request.AwardedPoints}");
@@ -337,8 +337,8 @@ namespace EcoTokenSystem.Application.Services
                 RejectionReason = post.RejectionReason,
                 // Thêm thông tin User nếu có
                 UserName = post.User?.Name ?? string.Empty,
-                UserAvatar = string.Empty, // User entity không có Avatar property
-                UserAvatarImage = null, // User entity không có AvatarImage property
+                UserAvatar = post.User?.Avatar ?? string.Empty,
+                UserAvatarImage = !string.IsNullOrEmpty(post.User?.Avatar) && post.User.Avatar.StartsWith("data:image") ? post.User.Avatar : null,
                 // Like and Comment information
                 LikesCount = post.Likes?.Count ?? 0,
                 Comments = post.Comments?.Select(c => new CommentDTO
@@ -347,6 +347,8 @@ namespace EcoTokenSystem.Application.Services
                     PostId = c.PostId,
                     UserId = c.UserId,
                     UserName = c.User?.Name ?? "Người dùng",
+                    UserAvatar = c.User?.Avatar ?? string.Empty,
+                    UserAvatarImage = !string.IsNullOrEmpty(c.User?.Avatar) && c.User.Avatar.StartsWith("data:image") ? c.User.Avatar : null,
                     Content = c.Content,
                     CreatedAt = c.CreatedAt
                 }).ToList() ?? new List<CommentDTO>(),
@@ -356,8 +358,8 @@ namespace EcoTokenSystem.Application.Services
             return new ResponseDTO<List<PostsDTO>>
             {
                 IsSuccess = true,
-                Message = postsDtoList.Any() 
-                    ? "Lấy danh sách bài đăng thành công." 
+                Message = postsDtoList.Any()
+                    ? "Lấy danh sách bài đăng thành công."
                     : "Không có bài đăng nào phù hợp.",
                 Data = postsDtoList
             };

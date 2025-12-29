@@ -63,6 +63,8 @@ namespace EcoTokenSystem.Infrastructure.Migrations
                     PasswordHash = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     RoleId = table.Column<int>(type: "int", nullable: false),
                     Name = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Email = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Avatar = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     DateOfBirth = table.Column<DateTime>(type: "datetime2", nullable: true),
                     Gender = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     PhoneNumber = table.Column<string>(type: "nvarchar(max)", nullable: false),
@@ -89,7 +91,8 @@ namespace EcoTokenSystem.Infrastructure.Migrations
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     UserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     ItemId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    RedemptionDate = table.Column<DateTime>(type: "datetime2", nullable: false)
+                    RedemptionDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    IsShipped = table.Column<bool>(type: "bit", nullable: false, defaultValue: false)
                 },
                 constraints: table =>
                 {
@@ -239,11 +242,11 @@ namespace EcoTokenSystem.Infrastructure.Migrations
 
             migrationBuilder.InsertData(
                 table: "Users",
-                columns: new[] { "Id", "Address", "CreatedAt", "CurrentPoints", "DateOfBirth", "Gender", "Name", "PasswordHash", "PhoneNumber", "RoleId", "Streak", "Username" },
+                columns: new[] { "Id", "Address", "Avatar", "CreatedAt", "CurrentPoints", "DateOfBirth", "Email", "Gender", "Name", "PasswordHash", "PhoneNumber", "RoleId", "Streak", "Username" },
                 values: new object[,]
                 {
-                    { new Guid("a3c72b9a-5d2e-4f8a-9a1c-4e1d8a2c9b6a"), "TP Hồ Chí Minh", new DateTime(2025, 11, 21, 6, 58, 59, 677, DateTimeKind.Utc).AddTicks(2265), 1500, new DateTime(2025, 11, 21, 6, 58, 59, 677, DateTimeKind.Utc).AddTicks(2264), "Nam", "Người dùng thử nghiệm", "$2a$11$YxK8vhj1T.F70B.HtsDBIOeFRDz4ONqiJ8uc8Rc32Xwy3Gy3wuCA6", "", 1, 0, "user_test" },
-                    { new Guid("f3e09f3d-6a2a-47c1-80f1-622abce815ca"), "TP Hồ Chí Minh", new DateTime(2025, 11, 21, 6, 58, 59, 677, DateTimeKind.Utc).AddTicks(2209), 99999, new DateTime(2025, 11, 21, 6, 58, 59, 677, DateTimeKind.Utc).AddTicks(2201), "Nữ", "Quản trị viên Hệ thống", "$2a$11$QOh34GWE1pvJ1QzCEht4leqFoWINZcdFdZWpc9B5PPlmg.oTX3OwO", "", 2, 99999, "admin" }
+                    { new Guid("a3c72b9a-5d2e-4f8a-9a1c-4e1d8a2c9b6a"), "TP Hồ Chí Minh", "🌱", new DateTime(2025, 11, 21, 6, 58, 59, 677, DateTimeKind.Utc).AddTicks(2265), 1500, new DateTime(2025, 11, 21, 6, 58, 59, 677, DateTimeKind.Utc).AddTicks(2264), "", "Nam", "Người dùng thử nghiệm", "$2a$11$YxK8vhj1T.F70B.HtsDBIOeFRDz4ONqiJ8uc8Rc32Xwy3Gy3wuCA6", "", 1, 0, "user_test" },
+                    { new Guid("f3e09f3d-6a2a-47c1-80f1-622abce815ca"), "TP Hồ Chí Minh", "🌱", new DateTime(2025, 11, 21, 6, 58, 59, 677, DateTimeKind.Utc).AddTicks(2209), 99999, new DateTime(2025, 11, 21, 6, 58, 59, 677, DateTimeKind.Utc).AddTicks(2201), "", "Nữ", "Quản trị viên Hệ thống", "$2a$11$QOh34GWE1pvJ1QzCEht4leqFoWINZcdFdZWpc9B5PPlmg.oTX3OwO", "", 2, 99999, "admin" }
                 });
 
             migrationBuilder.CreateIndex(

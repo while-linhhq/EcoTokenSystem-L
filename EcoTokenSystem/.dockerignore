@@ -1,0 +1,17 @@
+bin
+obj
+.vs
+.vscode
+.idea
+*.user
+*.suo
+*.cache
+.git
+.gitignore
+*.log
+.env
+.env.local
+.DS_Store
+wwwroot/images/*
+!wwwroot/images/.gitkeep
+

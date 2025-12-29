@@ -1,14 +1,4 @@
-# ============================================
-# DOCKERFILE - HƯỚNG DẪN CHO NGƯỜI MỚI HỌC
-# ============================================
-# Dockerfile giống như một công thức nấu ăn:
-# Nó hướng dẫn Docker cách "nấu" (build) ứng dụng của bạn thành một container
 
-# BƯỚC 1: Chọn base image (hình ảnh cơ sở)
-# -------------------------------------------
-# FROM = "Bắt đầu từ đây"
-# mcr.microsoft.com/dotnet/sdk:8.0 = Image chứa .NET 8.0 SDK (để build code)
-# AS build = Đặt tên stage này là "build" (giống như đặt tên cho một bước trong công thức)
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 
 # BƯỚC 2: Đặt thư mục làm việc

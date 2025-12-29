@@ -69,9 +69,86 @@
 }
 
 .nav-user {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.user-info-clickable {
   display: flex;
   align-items: center;
   gap: 10px;
+  cursor: pointer;
+  padding: 8px 12px;
+  border-radius: 8px;
+  transition: background 0.3s;
+}
+
+.user-info-clickable:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.dropdown-arrow {
+  font-size: 0.7em;
+  transition: transform 0.3s;
+  margin-left: 4px;
+}
+
+.nav-user:hover .dropdown-arrow,
+.nav-user.dropdown-open .dropdown-arrow {
+  transform: rotate(180deg);
+}
+
+.user-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 8px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  min-width: 160px;
+  overflow: hidden;
+  z-index: 1000;
+  animation: dropdownFadeIn 0.2s ease-out;
+}
+
+@keyframes dropdownFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.dropdown-item {
+  display: block;
+  width: 100%;
+  padding: 12px 16px;
+  text-align: left;
+  background: none;
+  border: none;
+  color: #333;
+  cursor: pointer;
+  font-size: 0.95em;
+  transition: background 0.2s;
+  font-family: inherit;
+}
+
+.dropdown-item:hover {
+  background: #f5f5f5;
+}
+
+.dropdown-item.logout-item {
+  color: #d32f2f;
+  border-top: 1px solid #e0e0e0;
+}
+
+.dropdown-item.logout-item:hover {
+  background: #ffebee;
 }
 
 .user-avatar-small {
@@ -91,21 +168,6 @@
   font-size: 0.95em;
 }
 
-.logout-btn-small {
-  background: rgba(255, 255, 255, 0.2);
-  color: white;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  padding: 6px 12px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 0.85em;
-  transition: background 0.3s;
-}
-
-.logout-btn-small:hover {
-  background: rgba(255, 255, 255, 0.3);
-}
-
 .main-content {
   flex: 1;
   background: linear-gradient(135deg, #f0f7f0 0%, #e8f5e9 100%);
@@ -113,6 +175,15 @@
 }
 
 @media (max-width: 768px) {
+  .user-dropdown {
+    right: -10px;
+    min-width: 140px;
+  }
+
+  .dropdown-item {
+    padding: 10px 14px;
+    font-size: 0.9em;
+  }
   .navbar {
     flex-direction: column;
     gap: 15px;
@@ -131,13 +202,20 @@
   }
 
   .nav-user {
-    flex-direction: column;
-    gap: 8px;
+    position: relative;
     width: 100%;
+    justify-content: flex-end;
   }
 
-  .logout-btn-small {
+  .user-info-clickable {
     width: 100%;
+    justify-content: flex-end;
+  }
+
+  .user-dropdown {
+    right: 0;
+    left: auto;
+    min-width: 140px;
   }
 }
 

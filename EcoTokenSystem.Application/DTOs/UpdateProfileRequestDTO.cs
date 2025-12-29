@@ -6,6 +6,8 @@ namespace EcoTokenSystem.Application.DTOs
     {
         [Required]
         public string Name { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string Avatar { get; set; } = string.Empty;
         [Required]
         public DateOnly? DateOfBirth { get; set; }
         [Required]

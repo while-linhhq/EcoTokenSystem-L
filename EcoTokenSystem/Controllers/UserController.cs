@@ -151,6 +151,8 @@ namespace EcoTokenSystem.API.Controllers
                     {
                         UserId = u.Id,
                         UserName = u.Name,
+                        UserAvatar = u.Avatar ?? string.Empty,
+                        UserAvatarImage = !string.IsNullOrEmpty(u.Avatar) && u.Avatar.StartsWith("data:image") ? u.Avatar : null,
                         CurrentPoints = u.CurrentPoints,
                         Streak = u.Streak,
                         Rank = 0 // Will be set after materialization

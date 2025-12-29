@@ -3,6 +3,8 @@ import { useAuth } from '../context/AuthContext';
 import { useConfig } from '../context/ConfigContext';
 import { useUsers } from '../context/UsersContext';
 import { getAllItemsApi, addItemApi, updateItemApi, deleteItemApi } from '../api/itemsAdminApi';
+import { getAllExchangesApi, updateShippedStatusApi } from '../api/adminExchangesApi';
+import { formatDate, formatDateForInput } from '../utils/dateUtils';
 import './Admin.css';
 
 const Admin = () => {
@@ -37,6 +39,12 @@ const Admin = () => {
 
   // Rewards sub-tab
   const [rewardsSubTab, setRewardsSubTab] = useState('streaks'); // 'streaks' or 'actions'
+
+  // Exchanges management
+  const [exchanges, setExchanges] = useState([]);
+  const [filteredExchanges, setFilteredExchanges] = useState([]);
+  const [exchangeDateFilter, setExchangeDateFilter] = useState('');
+  const [exchangeShippedFilter, setExchangeShippedFilter] = useState('all'); // 'all', 'shipped', 'not_shipped'
 
   // Streak milestone modal
   const [showStreakModal, setShowStreakModal] = useState(false);
@@ -80,17 +88,9 @@ const Admin = () => {
       // Load items khi vào tab items
       if (activeTab === 'items') {
         try {
-          console.log('[Admin] Loading items...');
           const response = await getAllItemsApi();
-          console.log('[Admin] Items response:', {
-            success: response.success,
-            dataLength: response.data?.length || 0,
-            data: response.data
-          });
-          
           if (response.success) {
             setItems(response.data || []);
-            console.log('[Admin] Items loaded:', response.data?.length || 0);
           } else {
             console.error('[Admin] Failed to load items:', response.message);
             setItems([]);
@@ -132,24 +132,101 @@ const Admin = () => {
     }
   }, [searchTerm, allUsers, activeTab]);
 
+  // Load exchanges when entering exchanges tab
+  useEffect(() => {
+    if (activeTab === 'exchanges') {
+      loadExchanges();
+    }
+  }, [activeTab]);
+
+  // Filter exchanges
+  useEffect(() => {
+    if (activeTab === 'exchanges') {
+      let filtered = [...exchanges];
+
+      // Filter by date
+      if (exchangeDateFilter) {
+        const filterDate = new Date(exchangeDateFilter);
+        filterDate.setHours(0, 0, 0, 0);
+        const nextDay = new Date(filterDate);
+        nextDay.setDate(nextDay.getDate() + 1);
+
+        filtered = filtered.filter(exchange => {
+          const exchangeDate = new Date(exchange.exchangedAt);
+          exchangeDate.setHours(0, 0, 0, 0);
+          return exchangeDate >= filterDate && exchangeDate < nextDay;
+        });
+      }
+
+      // Filter by shipped status
+      if (exchangeShippedFilter === 'shipped') {
+        filtered = filtered.filter(exchange => exchange.isShipped);
+      } else if (exchangeShippedFilter === 'not_shipped') {
+        filtered = filtered.filter(exchange => !exchange.isShipped);
+      }
+
+      setFilteredExchanges(filtered);
+    }
+  }, [exchanges, exchangeDateFilter, exchangeShippedFilter, activeTab]);
+
+  const loadExchanges = async () => {
+    try {
+      console.log('[Admin] Loading exchanges...');
+      const response = await getAllExchangesApi();
+      console.log('[Admin] Exchanges response:', {
+        success: response.success,
+        dataLength: response.data?.length || 0,
+        message: response.message
+      });
+      if (response.success) {
+        setExchanges(response.data || []);
+        console.log('[Admin] Exchanges loaded:', response.data?.length || 0);
+      } else {
+        console.error('[Admin] Failed to load exchanges:', response.message);
+        setExchanges([]);
+      }
+    } catch (error) {
+      console.error('[Admin] Error loading exchanges:', error);
+      setExchanges([]);
+    }
+  };
+
+  const handleToggleShipped = async (exchangeId, currentStatus) => {
+    try {
+      const newStatus = !currentStatus;
+      const response = await updateShippedStatusApi(exchangeId, newStatus);
+      if (response.success) {
+        // Update local state
+        setExchanges(prev => prev.map(ex =>
+          ex.id === exchangeId ? { ...ex, isShipped: newStatus } : ex
+        ));
+      } else {
+        alert(response.message || 'Không thể cập nhật trạng thái');
+      }
+    } catch (error) {
+      console.error('[Admin] Error updating shipped status:', error);
+      alert('Có lỗi xảy ra khi cập nhật trạng thái');
+    }
+  };
+
   const handleCreateModerator = async (e) => {
     e.preventDefault();
     if (!modEmail || !modPassword || !modNickname) {
       alert('Vui lòng điền đầy đủ thông tin');
       return;
     }
-    
+
     // Validate password length
     if (modPassword.length < 8) {
       alert('Mật khẩu phải có ít nhất 8 ký tự');
       return;
     }
-    
+
     try {
       // Backend chỉ cần username và password
       // Username có thể là email hoặc nickname
       console.log('[Admin] Creating user:', { username: modEmail, role: modRole, roleId: modRole === 'moderator' ? 3 : 1 });
-      
+
       const result = await createModerator({
         username: modEmail, // Dùng email làm username
         password: modPassword,
@@ -157,9 +234,9 @@ const Admin = () => {
         role: modRole, // 'user' hoặc 'moderator'
         roleId: modRole === 'moderator' ? 3 : 1
       });
-      
+
       console.log('[Admin] Create result:', result);
-      
+
       if (result && result.success) {
         alert(result.message || `Đã tạo tài khoản thành công: ${modNickname}`);
         setModEmail('');
@@ -174,7 +251,7 @@ const Admin = () => {
           errorMsg: errorMsg,
           fullError: JSON.stringify(result, null, 2)
         });
-        
+
         // Hiển thị alert với message chi tiết
         alert(`❌ ${errorMsg}\n\nVui lòng kiểm tra:\n1. Migration đã chạy chưa (RoleId=3)\n2. Username đã tồn tại chưa\n3. Password >= 8 ký tự\n4. Backend logs để xem chi tiết`);
       }
@@ -195,10 +272,11 @@ const Admin = () => {
 
   const handleSaveUser = async () => {
     if (!selectedUser) return;
-    
+
     // Map frontend data sang backend format
     const updateData = {
       name: selectedUser.name || selectedUser.nickname || null,
+      email: selectedUser.email || null,
       phoneNumber: selectedUser.phone || selectedUser.phoneNumber || null,
       address: selectedUser.address || null,
       gender: selectedUser.gender || null,
@@ -317,7 +395,7 @@ const Admin = () => {
 
   const handleConfirmDelete = async () => {
     if (!itemToDelete) return;
-    
+
     try {
       const result = await deleteItemApi(itemToDelete.id);
       if (result.success) {
@@ -406,7 +484,7 @@ const Admin = () => {
 
   const handleConfirmDeleteStreak = async () => {
     if (!streakToDelete) return;
-    
+
     try {
       const result = await deleteStreakMilestone(streakToDelete);
       if (result.success) {
@@ -456,7 +534,7 @@ const Admin = () => {
 
   const handleSubmitAction = async (e) => {
     e.preventDefault();
-    
+
     // Nếu đang edit default reward
     if (isEditingDefault) {
       try {
@@ -511,7 +589,7 @@ const Admin = () => {
 
   const handleConfirmDeleteAction = async () => {
     if (!actionToDelete) return;
-    
+
     try {
       const result = await deleteActionReward(actionToDelete);
       if (result.success) {
@@ -557,6 +635,12 @@ const Admin = () => {
           onClick={() => setActiveTab('users')}
         >
           👥 Quản lý User
+        </button>
+        <button
+          className={activeTab === 'exchanges' ? 'active' : ''}
+          onClick={() => setActiveTab('exchanges')}
+        >
+          📦 Quản lý Đổi Quà
         </button>
       </div>
 
@@ -605,8 +689,8 @@ const Admin = () => {
                 <option value="user">User (Người dùng thường)</option>
               </select>
               <p style={{ fontSize: '0.9em', color: '#666', marginTop: '5px' }}>
-                {modRole === 'moderator' 
-                  ? 'Moderator có quyền duyệt bài và quản lý user bình thường' 
+                {modRole === 'moderator'
+                  ? 'Moderator có quyền duyệt bài và quản lý user bình thường'
                   : 'User chỉ có quyền đăng bài và đổi quà'}
               </p>
             </div>
@@ -659,102 +743,146 @@ const Admin = () => {
             </div>
           </div>
 
+          {/* Items Statistics */}
+          <div className="items-stats">
+            <div className="item-stat-card">
+              <div className="stat-icon">📦</div>
+              <div className="stat-info">
+                <div className="stat-value">{items.length}</div>
+                <div className="stat-label">Tổng số items</div>
+              </div>
+            </div>
+            {categories.filter(cat => cat !== 'all').map(category => {
+              const count = items.filter(item => (item.tag || item.category || 'handmade') === category).length;
+              const categoryEmojis = {
+                handmade: '🎨',
+                vouchers: '🎫',
+                books: '📚',
+                movies: '🎬',
+                donations: '❤️'
+              };
+              return (
+                <div key={category} className="item-stat-card">
+                  <div className="stat-icon">{categoryEmojis[category] || '📦'}</div>
+                  <div className="stat-info">
+                    <div className="stat-value">{count}</div>
+                    <div className="stat-label">
+                      {category === 'handmade' ? 'Handmade' :
+                       category === 'vouchers' ? 'Voucher' :
+                       category === 'books' ? 'Sách' :
+                       category === 'movies' ? 'Phim' :
+                       'Quyên góp'}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
           {/* Items List */}
           <div>
             {(() => {
               const filteredItems = selectedCategory === 'all'
                 ? items
                 : items.filter(item => (item.tag || item.category || 'handmade') === selectedCategory);
-              
+
+              const getTagInfo = (tag) => {
+                const tagMap = {
+                  handmade: { emoji: '🎨', name: 'Handmade', color: '#e91e63' },
+                  vouchers: { emoji: '🎫', name: 'Voucher', color: '#2196f3' },
+                  books: { emoji: '📚', name: 'Sách', color: '#9c27b0' },
+                  movies: { emoji: '🎬', name: 'Phim', color: '#f44336' },
+                  donations: { emoji: '❤️', name: 'Quyên góp', color: '#ff5722' }
+                };
+                return tagMap[tag] || { emoji: '📦', name: tag || 'Khác', color: '#757575' };
+              };
+
               return (
                 <>
-                  <p style={{ color: '#666', marginBottom: '10px' }}>
-                    Hiển thị {filteredItems.length} / {items.length} items
-                  </p>
-                  <div className="items-list" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '20px', marginTop: '20px' }}>
-              {filteredItems.map(item => {
-                console.log('[Admin] Rendering item:', {
-                  id: item.id,
-                  name: item.name,
-                  imageUrl: item.imageUrl,
-                  hasImageUrl: !!item.imageUrl
-                });
-                
-                return (
-                  <div key={item.id} className="item-card" style={{ border: '1px solid #ddd', padding: '15px', borderRadius: '8px' }}>
-                    {item.imageUrl ? (
-                      <img 
-                        src={item.imageUrl} 
-                        alt={item.name} 
-                        style={{ width: '100%', height: '150px', objectFit: 'cover', borderRadius: '4px', marginBottom: '10px' }}
-                        onError={(e) => {
-                          const errorDetails = {
-                            src: item.imageUrl,
-                            itemName: item.name,
-                            itemId: item.id,
-                            error: e.target.error?.message || 'Unknown error',
-                            status: e.target.naturalWidth === 0 ? 'Failed to load' : 'Partial load'
-                          };
-                          console.error('[Admin] Image load error:', errorDetails);
-                          
-                          // Hiển thị placeholder thay vì ẩn hoàn toàn
-                          e.target.style.display = 'none';
-                          const placeholder = document.createElement('div');
-                          placeholder.style.cssText = 'width: 100%; height: 150px; background-color: #f0f0f0; display: flex; align-items: center; justify-content: center; border-radius: 4px; margin-bottom: 10px;';
-                          placeholder.innerHTML = '<span style="color: #999;">📦 Ảnh không tải được</span>';
-                          e.target.parentNode.insertBefore(placeholder, e.target);
-                        }}
-                        onLoad={() => {
-                          console.log('[Admin] Image loaded successfully:', item.imageUrl);
-                        }}
-                      />
-                    ) : (
-                      <div style={{ width: '100%', height: '150px', backgroundColor: '#f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '4px', marginBottom: '10px' }}>
-                        <span style={{ color: '#999' }}>📦 Không có ảnh</span>
-                      </div>
-                    )}
-                  <h4>{item.name}</h4>
-                  <p>Điểm: {item.requiredPoints || item.price}</p>
-                  <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
-                    <button
-                      className="edit-btn"
-                      onClick={() => handleOpenEditItemModal(item)}
-                      style={{
-                        flex: 1,
-                        padding: '8px 16px',
-                        backgroundColor: '#4a7c2a',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        fontSize: '14px'
-                      }}
-                    >
-                      Sửa
-                    </button>
-                    <button
-                      className="delete-btn"
-                      onClick={() => handleOpenDeleteModal(item)}
-                      style={{
-                        flex: 1,
-                        padding: '8px 16px',
-                        backgroundColor: '#dc3545',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        fontSize: '14px'
-                      }}
-                    >
-                      Xóa
-                    </button>
+                  <div className="items-header-info">
+                    <p className="items-count-text">
+                      Hiển thị <strong>{filteredItems.length}</strong> / {items.length} items
+                      {selectedCategory !== 'all' && (
+                        <span className="category-filter-badge">
+                          {getTagInfo(selectedCategory).emoji} {getTagInfo(selectedCategory).name}
+                        </span>
+                      )}
+                    </p>
                   </div>
-                </div>
-                );
-              })}
+                  <div className="admin-items-grid">
+                    {filteredItems.map(item => {
+                      const tagInfo = getTagInfo(item.tag || item.category || 'handmade');
+
+                      return (
+                        <div key={item.id} className="admin-item-card">
+                          <div className="item-card-image-wrapper">
+                            {item.imageUrl ? (
+                              <img
+                                src={item.imageUrl}
+                                alt={item.name}
+                                className="item-card-image"
+                                onError={(e) => {
+                                  e.target.style.display = 'none';
+                                  const fallback = e.target.nextElementSibling;
+                                  if (fallback) fallback.style.display = 'flex';
+                                }}
+                              />
+                            ) : null}
+                            <div
+                              className="item-card-image-placeholder"
+                              style={{ display: item.imageUrl ? 'none' : 'flex' }}
+                            >
+                              <span className="placeholder-icon">📦</span>
+                            </div>
+                            <div className="item-card-tag-badge" style={{ backgroundColor: tagInfo.color }}>
+                              <span className="tag-emoji">{tagInfo.emoji}</span>
+                              <span className="tag-name">{tagInfo.name}</span>
+                            </div>
+                          </div>
+
+                          <div className="item-card-content">
+                            <h3 className="item-card-title">{item.name || 'Quà tặng'}</h3>
+
+                            <div className="item-card-info">
+                              <div className="item-points">
+                                <span className="points-icon">🪙</span>
+                                <span className="points-value">{item.requiredPoints || item.price || 0}</span>
+                                <span className="points-label">điểm</span>
+                              </div>
+                            </div>
+
+                            <div className="item-card-actions">
+                              <button
+                                className="item-edit-btn"
+                                onClick={() => handleOpenEditItemModal(item)}
+                              >
+                                <span className="btn-icon">✏️</span>
+                                <span className="btn-text">Sửa</span>
+                              </button>
+                              <button
+                                className="item-delete-btn"
+                                onClick={() => handleOpenDeleteModal(item)}
+                              >
+                                <span className="btn-icon">🗑️</span>
+                                <span className="btn-text">Xóa</span>
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                   {filteredItems.length === 0 && (
-                    <p style={{ textAlign: 'center', color: '#666', marginTop: '20px' }}>Không có items nào trong danh mục này</p>
+                    <div className="items-empty-state">
+                      <div className="empty-icon">📦</div>
+                      <p className="empty-text">Không có items nào trong danh mục này</p>
+                      <button
+                        className="empty-add-btn"
+                        onClick={handleOpenAddItemModal}
+                      >
+                        + Thêm item mới
+                      </button>
+                    </div>
                   )}
                 </>
               );
@@ -984,49 +1112,227 @@ const Admin = () => {
                 Hiển thị {filteredUsers.length} / {allUsers?.length || 0} users
               </p>
               <div className="users-list">
-                {filteredUsers.map((u) => (
-              <div key={u.id} className="user-card">
-                <div className="user-info">
-                  {u.avatarImage ? (
-                    <img src={u.avatarImage} alt={u.nickname} className="user-avatar-image" />
-                  ) : (
-                    <div className="user-avatar">{u.avatar || '👤'}</div>
-                  )}
-                  <div className="user-details">
-                    <h3>{u.name || u.nickname || u.username || 'Chưa có tên'}</h3>
-                    <p>Username: {u.username || 'N/A'}</p>
-                    <p>SĐT: {u.phone || u.phoneNumber || 'N/A'}</p>
-                    <p>Role: {u.roleName || u.role || 'user'}</p>
-                    <p>Eco Tokens: {u.currentPoints ?? u.ecoTokens ?? 0}</p>
-                    {u.streak !== undefined && <p>Streak: {u.streak}</p>}
-                  </div>
-                </div>
-                <div style={{ display: 'flex', gap: '10px' }}>
-                  <button className="edit-btn" onClick={() => handleEditUser(u)}>
-                    Chỉnh sửa
-                  </button>
-                  {u.roleId !== 2 && ( // Không hiển thị nút xóa cho Admin
-                    <button 
-                      className="delete-btn" 
-                      onClick={() => handleDeleteUser(u.id, u.username || u.name || 'user')}
-                      style={{
-                        backgroundColor: '#dc3545',
-                        color: 'white',
-                        border: 'none',
-                        padding: '8px 16px',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        fontSize: '14px'
-                      }}
-                    >
-                      Xóa
-                    </button>
-                  )}
-                </div>
-              </div>
-            ))}
+                {filteredUsers.map((u) => {
+                  const userRole = u.roleName || u.role || 'user';
+                  const roleBadgeClass = userRole.toLowerCase() === 'admin' ? 'role-badge-admin' :
+                                        userRole.toLowerCase() === 'moderator' ? 'role-badge-moderator' :
+                                        'role-badge-user';
+
+                  return (
+                    <div key={u.id} className="admin-user-card">
+                      <div className="admin-user-avatar-section">
+                        {u.avatarImage ? (
+                          <img
+                            src={u.avatarImage}
+                            alt={u.nickname || u.name || u.username}
+                            className="admin-user-avatar-image"
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                              const fallback = e.target.nextElementSibling;
+                              if (fallback) fallback.style.display = 'flex';
+                            }}
+                          />
+                        ) : null}
+                        <div
+                          className="admin-user-avatar"
+                          style={{ display: u.avatarImage ? 'none' : 'flex' }}
+                        >
+                          {u.avatar || '👤'}
+                        </div>
+                      </div>
+
+                      <div className="admin-user-info">
+                        <div className="admin-user-header">
+                          <div className="admin-user-name-section">
+                            <h3 className="admin-user-name">{u.name || u.nickname || u.username || 'Chưa có tên'}</h3>
+                            <span className={`admin-role-badge ${roleBadgeClass}`}>
+                              {userRole === 'Admin' ? '👑 Admin' :
+                               userRole === 'Moderator' ? '👮 Moderator' :
+                               '👤 User'}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="admin-user-details-grid">
+                          <div className="admin-user-detail-item">
+                            <span className="detail-label">Username:</span>
+                            <span className="detail-value">{u.username || 'N/A'}</span>
+                          </div>
+                          {u.email && (
+                            <div className="admin-user-detail-item">
+                              <span className="detail-label">Email:</span>
+                              <span className="detail-value">{u.email}</span>
+                            </div>
+                          )}
+                          {(u.phone || u.phoneNumber) && (
+                            <div className="admin-user-detail-item">
+                              <span className="detail-label">SĐT:</span>
+                              <span className="detail-value">{u.phone || u.phoneNumber}</span>
+                            </div>
+                          )}
+                          {u.address && (
+                            <div className="admin-user-detail-item">
+                              <span className="detail-label">Địa chỉ:</span>
+                              <span className="detail-value">{u.address}</span>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="admin-user-stats">
+                          <div className="admin-user-stat-item">
+                            <span className="stat-icon">🪙</span>
+                            <span className="stat-label">Tokens:</span>
+                            <span className="stat-value">{u.currentPoints ?? u.ecoTokens ?? 0}</span>
+                          </div>
+                          {u.streak !== undefined && u.streak !== null && (
+                            <div className="admin-user-stat-item">
+                              <span className="stat-icon">🔥</span>
+                              <span className="stat-label">Streak:</span>
+                              <span className="stat-value">{u.streak}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="admin-user-actions">
+                        <button
+                          className="admin-edit-btn"
+                          onClick={() => handleEditUser(u)}
+                        >
+                          ✏️ Chỉnh sửa
+                        </button>
+                        {u.roleId !== 2 && ( // Không hiển thị nút xóa cho Admin
+                          <button
+                            className="admin-delete-btn"
+                            onClick={() => handleDeleteUser(u.id, u.username || u.name || 'user')}
+                          >
+                            🗑️ Xóa
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </>
+          )}
+        </div>
+      )}
+
+      {activeTab === 'exchanges' && (
+        <div className="admin-section">
+          <h2>📦 Quản lý Đổi Quà</h2>
+
+          <div className="exchanges-filters">
+            <div className="filter-group">
+              <label>Lọc theo ngày:</label>
+              <input
+                type="date"
+                value={exchangeDateFilter}
+                onChange={(e) => setExchangeDateFilter(e.target.value)}
+                className="filter-date-input"
+              />
+              {exchangeDateFilter && (
+                <button
+                  className="filter-clear-btn"
+                  onClick={() => setExchangeDateFilter('')}
+                >
+                  ✕ Xóa
+                </button>
+              )}
+            </div>
+            <div className="filter-group">
+              <label>Trạng thái:</label>
+              <select
+                value={exchangeShippedFilter}
+                onChange={(e) => setExchangeShippedFilter(e.target.value)}
+                className="filter-select"
+              >
+                <option value="all">Tất cả</option>
+                <option value="not_shipped">Chưa gửi đơn</option>
+                <option value="shipped">Đã gửi đơn</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="exchanges-stats">
+            <div className="exchange-stat-item">
+              <span className="stat-label">Tổng số:</span>
+              <span className="stat-value">{exchanges.length}</span>
+            </div>
+            <div className="exchange-stat-item">
+              <span className="stat-label">Đã gửi:</span>
+              <span className="stat-value shipped">{exchanges.filter(e => e.isShipped).length}</span>
+            </div>
+            <div className="exchange-stat-item">
+              <span className="stat-label">Chưa gửi:</span>
+              <span className="stat-value not-shipped">{exchanges.filter(e => !e.isShipped).length}</span>
+            </div>
+            <div className="exchange-stat-item">
+              <span className="stat-label">Hiển thị:</span>
+              <span className="stat-value">{filteredExchanges.length}</span>
+            </div>
+          </div>
+
+          {filteredExchanges.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
+              <p>{exchanges.length === 0 ? 'Chưa có đơn đổi quà nào' : 'Không có đơn nào khớp với bộ lọc'}</p>
+            </div>
+          ) : (
+            <div className="exchanges-list">
+              {filteredExchanges.map((exchange) => (
+                <div key={exchange.id} className={`exchange-card ${exchange.isShipped ? 'shipped' : ''}`}>
+                  <div className="exchange-item-info">
+                    {exchange.giftImageUrl ? (
+                      <img
+                        src={exchange.giftImageUrl}
+                        alt={exchange.giftName}
+                        className="exchange-item-image"
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                          const fallback = e.target.nextElementSibling;
+                          if (fallback) fallback.style.display = 'flex';
+                        }}
+                      />
+                    ) : null}
+                    <div
+                      className="exchange-item-placeholder"
+                      style={{ display: exchange.giftImageUrl ? 'none' : 'flex' }}
+                    >
+                      📦
+                    </div>
+                    <div className="exchange-item-details">
+                      <h3 className="exchange-item-name">{exchange.giftName || 'Quà tặng'}</h3>
+                      <div className="exchange-item-meta">
+                        <span className="exchange-price">🪙 {exchange.price || 0} điểm</span>
+                        <span className="exchange-date">📅 {formatDate(exchange.exchangedAt)}</span>
+                      </div>
+                      <div className="exchange-user-info">
+                        <div className="exchange-user-name">👤 {exchange.userName || 'Người dùng'}</div>
+                        {exchange.userPhoneNumber && (
+                          <div className="exchange-user-phone">📞 {exchange.userPhoneNumber}</div>
+                        )}
+                        {exchange.userAddress && (
+                          <div className="exchange-user-address">📍 {exchange.userAddress}</div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="exchange-actions">
+                    <label className="exchange-shipped-checkbox">
+                      <input
+                        type="checkbox"
+                        checked={exchange.isShipped || false}
+                        onChange={() => handleToggleShipped(exchange.id, exchange.isShipped || false)}
+                      />
+                      <span className="checkbox-label">
+                        {exchange.isShipped ? '✅ Đã gửi đơn' : '⏳ Chưa gửi đơn'}
+                      </span>
+                    </label>
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
         </div>
       )}
@@ -1050,6 +1356,14 @@ const Admin = () => {
                 value={selectedUser.username || ''}
                 disabled
                 style={{ background: '#f5f5f5' }}
+              />
+            </div>
+            <div className="form-group">
+              <label>Email</label>
+              <input
+                type="email"
+                value={selectedUser.email || ''}
+                onChange={(e) => setSelectedUser({ ...selectedUser, email: e.target.value })}
               />
             </div>
             <div className="form-group">
@@ -1273,9 +1587,9 @@ const Admin = () => {
                     style={{ width: '60px', height: '45px', cursor: 'pointer', border: '2px solid #ddd', borderRadius: '8px' }}
                   />
                   <div style={{ flex: 1 }}>
-                    <div style={{ 
-                      padding: '10px 15px', 
-                      backgroundColor: streakForm.color, 
+                    <div style={{
+                      padding: '10px 15px',
+                      backgroundColor: streakForm.color,
                       borderRadius: '8px',
                       color: '#fff',
                       textAlign: 'center',
@@ -1292,7 +1606,7 @@ const Admin = () => {
               </div>
               <div className="form-group emoji-picker-container" style={{ position: 'relative' }}>
                 <label>Emoji linh vật *</label>
-                <div 
+                <div
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -1313,9 +1627,9 @@ const Admin = () => {
                   <span style={{ color: '#666', flex: 1 }}>Nhấn để chọn emoji</span>
                   <span style={{ color: '#999', transform: showEmojiPicker ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>▼</span>
                 </div>
-                
+
                 {showEmojiPicker && (
-                  <div 
+                  <div
                     className="emoji-picker-dropdown"
                     style={{
                       position: 'absolute',
@@ -1334,7 +1648,7 @@ const Admin = () => {
                     }}
                     onClick={(e) => e.stopPropagation()}
                   >
-                    <div style={{ 
+                    <div style={{
                       fontSize: '0.9em',
                       color: '#666',
                       marginBottom: '10px',
@@ -1342,9 +1656,9 @@ const Admin = () => {
                     }}>
                       Chọn emoji linh vật:
                     </div>
-                    <div style={{ 
-                      display: 'grid', 
-                      gridTemplateColumns: 'repeat(8, 1fr)', 
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(8, 1fr)',
                       gap: '8px',
                       marginBottom: '15px'
                     }}>
@@ -1385,9 +1699,9 @@ const Admin = () => {
                         </button>
                       ))}
                     </div>
-                    <div style={{ 
-                      padding: '10px', 
-                      borderTop: '1px solid #eee', 
+                    <div style={{
+                      padding: '10px',
+                      borderTop: '1px solid #eee',
                       marginTop: '10px',
                       fontSize: '0.9em',
                       color: '#666',
@@ -1509,10 +1823,10 @@ const Admin = () => {
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>
-                {isEditingDefault 
-                  ? 'Chỉnh sửa Phần thưởng Mặc định' 
-                  : (actionForm.tag && config.actionRewards?.tags?.[actionForm.tag] 
-                    ? `Chỉnh sửa Action Reward: ${actionForm.tag}` 
+                {isEditingDefault
+                  ? 'Chỉnh sửa Phần thưởng Mặc định'
+                  : (actionForm.tag && config.actionRewards?.tags?.[actionForm.tag]
+                    ? `Chỉnh sửa Action Reward: ${actionForm.tag}`
                     : 'Thêm Action Reward mới')}
               </h3>
               <button className="modal-close" onClick={handleCloseActionModal}>×</button>

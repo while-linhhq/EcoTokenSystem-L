@@ -12,6 +12,7 @@ namespace EcoTokenSystem.Domain.Entities
         public Guid UserId { get; set; }
         public Guid ItemId { get; set; }
         public DateTime RedemptionDate { get; set; } = DateTime.UtcNow;
+        public bool IsShipped { get; set; } = false;
         public Items Item { get; set; } 
         public User User { get; set; }
     }

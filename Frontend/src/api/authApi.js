@@ -41,8 +41,13 @@ const mapUserResponse = (backendData) => {
     token: token, // Đảm bảo token được map
     // Thêm các field khác nếu có
     name: backendData.Name || backendData.name || '',
+    fullName: backendData.Name || backendData.name || '',
+    nickname: backendData.Name || backendData.name || username || '',
     email: backendData.Email || backendData.email || '',
+    avatar: backendData.Avatar || backendData.avatar || '🌱',
+    avatarImage: (backendData.Avatar || backendData.avatar)?.startsWith('data:image') ? (backendData.Avatar || backendData.avatar) : null,
     phone: backendData.PhoneNumber || backendData.phoneNumber || backendData.phone || '',
+    phoneNumber: backendData.PhoneNumber || backendData.phoneNumber || backendData.phone || '',
     address: backendData.Address || backendData.address || '',
     gender: backendData.Gender || backendData.gender || '',
     dateOfBirth: backendData.DateOfBirth || backendData.dateOfBirth || null,
@@ -151,10 +156,11 @@ export const loginApi = async (username, password) => {
  */
 export const registerApi = async (userData) => {
   try {
+    // Backend DTO: Username, Password, PasswordConfirm (PascalCase)
     const response = await apiPost('/User/Register', {
-      username: userData.username || userData.email || userData.phone,
-      password: userData.password,
-      // Backend có thể cần thêm fields khác
+      Username: userData.username,
+      Password: userData.password,
+      PasswordConfirm: userData.passwordConfirm
     }, false); // Không cần auth cho register
 
     if (response.success) {
@@ -232,15 +238,13 @@ export const updateUserApi = async (userId, updatedData) => {
       dateOfBirth = new Date().toISOString().split('T')[0];
     }
 
-    // Lấy Name - ưu tiên: updatedData.fullName > updatedData.name > updatedData.nickname > currentUser.fullName > currentUser.name/Name > currentUser.nickname > default
-    // Database chỉ có field 'Name', không có 'FullName', nên cần map fullName vào name
-    const name = updatedData.fullName ||
-                 updatedData.name ||
+    // Lấy Name - nickname và name là một
+    const name = updatedData.name ||
                  updatedData.nickname || 
-                 currentUser.fullName ||
                  currentUser.name || 
                  currentUser.Name || 
                  currentUser.nickname || 
+                 currentUser.fullName ||
                  currentUser.username || 
                  'Người dùng'; // Default value thay vì empty string
 
@@ -263,8 +267,32 @@ export const updateUserApi = async (userId, updatedData) => {
                     currentUser.Address || 
                     'Chưa cập nhật'; // Default value thay vì empty string
 
+    // Lấy Email - ưu tiên: updatedData.email > currentUser.email/Email > default
+    const email = updatedData.email || 
+                  currentUser.email || 
+                  currentUser.Email || 
+                  ''; // Email không bắt buộc, có thể để trống
+
+    // Lấy Avatar - ưu tiên: updatedData.avatar > currentUser.avatar/Avatar > default
+    // Nếu avatarType là 'image' và có avatarImage, lưu URL hoặc base64 (tùy backend)
+    // Nếu avatarType là 'emoji', lưu emoji string
+    let avatar = '';
+    if (updatedData.avatarType === 'image' && updatedData.avatarImage) {
+      // Nếu có ảnh, có thể lưu base64 hoặc URL (tùy backend yêu cầu)
+      // Tạm thời lưu emoji đặc biệt để đánh dấu có ảnh, hoặc lưu base64
+      avatar = updatedData.avatarImage; // Lưu base64 hoặc URL
+    } else if (updatedData.avatar) {
+      avatar = updatedData.avatar; // Emoji
+    } else {
+      avatar = currentUser.avatar || 
+               currentUser.Avatar || 
+               '🌱'; // Default emoji
+    }
+
     const backendData = {
       name: name,
+      email: email,
+      avatar: avatar,
       phoneNumber: phoneNumber,
       address: address,
       gender: gender,

@@ -85,16 +85,36 @@ export const ActionsProvider = ({ children }) => {
         }
         
         // Cũng load approved và rejected để hiển thị trong tabs
+        console.log('[ActionsContext] Loading approved posts for Moderator/Admin...');
         const approvedRes = await getApprovedActionsApi();
-        if (approvedRes.success && approvedRes.data) {
+        console.log('[ActionsContext] getApprovedActionsApi response:', {
+          success: approvedRes.success,
+          dataLength: approvedRes.data ? (Array.isArray(approvedRes.data) ? approvedRes.data.length : 'not array') : 'no data',
+          message: approvedRes.message,
+          data: approvedRes.data
+        });
+        if (approvedRes.success) {
           const approved = Array.isArray(approvedRes.data) ? approvedRes.data : [];
+          console.log('[ActionsContext] Loaded', approved.length, 'approved posts');
           allActions = [...allActions, ...approved];
+        } else {
+          console.warn('[ActionsContext] Failed to load approved posts:', approvedRes.message || 'Unknown error');
         }
         
+        console.log('[ActionsContext] Loading rejected posts for Moderator/Admin...');
         const rejectedRes = await getRejectedActionsApi();
-        if (rejectedRes.success && rejectedRes.data) {
+        console.log('[ActionsContext] getRejectedActionsApi response:', {
+          success: rejectedRes.success,
+          dataLength: rejectedRes.data ? (Array.isArray(rejectedRes.data) ? rejectedRes.data.length : 'not array') : 'no data',
+          message: rejectedRes.message,
+          data: rejectedRes.data
+        });
+        if (rejectedRes.success) {
           const rejected = Array.isArray(rejectedRes.data) ? rejectedRes.data : [];
+          console.log('[ActionsContext] Loaded', rejected.length, 'rejected posts');
           allActions = [...allActions, ...rejected];
+        } else {
+          console.warn('[ActionsContext] Failed to load rejected posts:', rejectedRes.message || 'Unknown error');
         }
       } else {
         // User thường: Chỉ load posts của chính họ

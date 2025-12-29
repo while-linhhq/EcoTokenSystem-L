@@ -8,6 +8,7 @@ namespace EcoTokenSystem.Application.DTOs
         public Guid UserId { get; set; }
         public Guid ItemId { get; set; }
         public DateTime RedemptionDate { get; set; }
+        public bool IsShipped { get; set; } = false;
         
         // Item details (from navigation property)
         public string ItemName { get; set; } = string.Empty;
@@ -16,6 +17,8 @@ namespace EcoTokenSystem.Application.DTOs
         
         // User details (optional, for admin view)
         public string UserName { get; set; } = string.Empty;
+        public string UserPhoneNumber { get; set; } = string.Empty;
+        public string UserAddress { get; set; } = string.Empty;
     }
 }
 

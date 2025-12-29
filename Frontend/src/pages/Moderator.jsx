@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useActions } from '../context/ActionsContext';
 import { useConfig } from '../context/ConfigContext';
+import { formatDate } from '../utils/dateUtils';
 import './Moderator.css';
 
 const Moderator = () => {
@@ -90,11 +91,7 @@ const Moderator = () => {
     }
   };
 
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleString('vi-VN');
-  };
-
+  // Render card chi tiết cho pending actions
   const renderActionCard = (action) => (
     <div key={action.id} className="action-card">
       <div className="action-header">
@@ -106,13 +103,11 @@ const Moderator = () => {
           )}
           <div className="user-info">
             <div className="user-name">{action.userName}</div>
-            <div className="action-time">{formatDate(action.submittedAt)}</div>
+            <div className="action-time">Gửi: {formatDate(action.submittedAt)}</div>
           </div>
         </div>
         <div className={`action-status status-${action.status}`}>
-          {action.status === 'pending' && '⏳ Chờ duyệt'}
-          {action.status === 'approved' && '✅ Đã duyệt'}
-          {action.status === 'rejected' && '❌ Đã từ chối'}
+          ⏳ Chờ duyệt
         </div>
       </div>
 
@@ -128,7 +123,6 @@ const Moderator = () => {
                 actionId: action.id,
                 actionTitle: action.title
               });
-              // Ẩn ảnh và hiển thị placeholder
               e.target.style.display = 'none';
               const placeholder = e.target.nextElementSibling;
               if (!placeholder || !placeholder.classList.contains('image-placeholder')) {
@@ -137,9 +131,6 @@ const Moderator = () => {
                 placeholderDiv.textContent = action.imageEmoji || '📷';
                 e.target.parentNode.appendChild(placeholderDiv);
               }
-            }}
-            onLoad={() => {
-              console.log('[Moderator] Image loaded successfully:', action.imageUrl);
             }}
           />
         ) : (
@@ -159,41 +150,88 @@ const Moderator = () => {
         </div>
       )}
 
-      {action.comment && (
-        <div className={`moderator-comment ${action.status === 'approved' ? 'approved' : 'rejected'}`}>
-          <strong>Nhận xét:</strong> {action.comment}
-          {action.reviewedAt && (
-            <span className="review-time"> - {formatDate(action.reviewedAt)}</span>
+      <div className="action-actions">
+        <div className="comment-input-group">
+          <textarea
+            placeholder="Nhập nhận xét (bắt buộc nếu từ chối)..."
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            rows="3"
+          />
+        </div>
+        <div className="action-buttons">
+          <button
+            className="approve-btn"
+            onClick={() => handleApprove(action)}
+          >
+            ✅ Duyệt (+1 Streak, +10 Tokens)
+          </button>
+          <button
+            className="reject-btn"
+            onClick={() => handleReject(action)}
+          >
+            ❌ Từ chối
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  // Render list item tinh gọn cho approved/rejected actions
+  const renderActionListItem = (action) => (
+    <div key={action.id} className="action-list-item">
+      <div className="action-list-thumbnail">
+        {action.imageUrl && action.imageUrl.trim() !== '' ? (
+          <img 
+            src={action.imageUrl} 
+            alt={action.title || 'Hành động xanh'}
+            onError={(e) => {
+              e.target.style.display = 'none';
+              const placeholder = e.target.nextElementSibling;
+              if (!placeholder || !placeholder.classList.contains('thumbnail-placeholder')) {
+                const placeholderDiv = document.createElement('div');
+                placeholderDiv.className = 'thumbnail-placeholder';
+                placeholderDiv.textContent = action.imageEmoji || '📷';
+                e.target.parentNode.appendChild(placeholderDiv);
+              }
+            }}
+          />
+        ) : (
+          <div className="thumbnail-placeholder">{action.imageEmoji || '📷'}</div>
+        )}
+      </div>
+      <div className="action-list-content">
+        <div className="action-list-header">
+          <div className="action-list-user">
+            {action.userAvatarImage ? (
+              <img src={action.userAvatarImage} alt={action.userName} className="list-user-avatar-image" />
+            ) : (
+              <div className="list-user-avatar">{action.userAvatar || '🌱'}</div>
+            )}
+            <span className="list-user-name">{action.userName}</span>
+          </div>
+          <div className={`list-status-badge status-${action.status}`}>
+            {action.status === 'approved' && '✅ Đã duyệt'}
+            {action.status === 'rejected' && '❌ Đã từ chối'}
+          </div>
+        </div>
+        <div className="action-list-title">{action.title || 'Hành động xanh'}</div>
+        <div className="action-list-meta">
+          <span className="list-time">
+            {action.status === 'approved' && action.reviewedAt && `Duyệt: ${formatDate(action.reviewedAt)}`}
+            {action.status === 'rejected' && action.reviewedAt && `Từ chối: ${formatDate(action.reviewedAt)}`}
+            {!action.reviewedAt && action.submittedAt && `Gửi: ${formatDate(action.submittedAt)}`}
+          </span>
+          {action.status === 'approved' && action.awardedPoints > 0 && (
+            <span className="list-reward">🪙 +{action.awardedPoints} điểm</span>
           )}
         </div>
-      )}
-
-      {action.status === 'pending' && (
-        <div className="action-actions">
-          <div className="comment-input-group">
-            <textarea
-              placeholder="Nhập nhận xét (bắt buộc nếu từ chối)..."
-              value={comment}
-              onChange={(e) => setComment(e.target.value)}
-              rows="3"
-            />
+        {(action.comment || action.rejectionReason) && (
+          <div className={`list-comment ${action.status === 'approved' ? 'approved' : 'rejected'}`}>
+            {action.comment || action.rejectionReason}
           </div>
-          <div className="action-buttons">
-            <button
-              className="approve-btn"
-              onClick={() => handleApprove(action)}
-            >
-              ✅ Duyệt (+1 Streak, +10 Tokens)
-            </button>
-            <button
-              className="reject-btn"
-              onClick={() => handleReject(action)}
-            >
-              ❌ Từ chối
-            </button>
-          </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 
@@ -240,7 +278,7 @@ const Moderator = () => {
         </button>
       </div>
 
-      <div className="actions-list">
+      <div className={activeTab === 'pending' ? 'actions-list' : 'actions-list-compact'}>
         {activeTab === 'pending' && (
           <>
             {pendingActions.length === 0 ? (
@@ -260,7 +298,7 @@ const Moderator = () => {
                 <p>Chưa có hành động nào được duyệt</p>
               </div>
             ) : (
-              approvedActions.map(renderActionCard)
+              approvedActions.map(renderActionListItem)
             )}
           </>
         )}
@@ -272,7 +310,7 @@ const Moderator = () => {
                 <p>Chưa có hành động nào bị từ chối</p>
               </div>
             ) : (
-              rejectedActions.map(renderActionCard)
+              rejectedActions.map(renderActionListItem)
             )}
           </>
         )}

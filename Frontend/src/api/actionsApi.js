@@ -13,17 +13,17 @@ const BACKEND_BASE_URL = API_BASE_URL.replace('/api', '');
  */
 const normalizeImageUrl = (imageUrl) => {
   if (!imageUrl) return '';
-  
+
   // Nếu đã là absolute URL (http/https), giữ nguyên
   if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
     return imageUrl;
   }
-  
+
   // Nếu là relative path từ root (bắt đầu với /)
   if (imageUrl.startsWith('/')) {
     return `${BACKEND_BASE_URL}${imageUrl}`;
   }
-  
+
   // Nếu là relative path không có leading slash
   return `${BACKEND_BASE_URL}/${imageUrl}`;
 };
@@ -46,7 +46,7 @@ export const submitActionApi = async (actionData) => {
     const title = actionData.title || actionData.description || 'Hành động xanh';
     // Ưu tiên content từ actionData, fallback sang description nếu không có
     const content = actionData.content || actionData.description || '';
-    
+
     // Validate title và content
     if (!title.trim()) {
       throw new Error('Tiêu đề không được để trống');
@@ -54,10 +54,10 @@ export const submitActionApi = async (actionData) => {
     if (!content.trim()) {
       throw new Error('Nội dung không được để trống');
     }
-    
+
     formData.append('title', title.trim());
     formData.append('content', content.trim());
-    
+
     if (actionData.image || actionData.imageFile) {
       formData.append('imageFile', actionData.image || actionData.imageFile);
       console.log('[submitActionApi] Đã thêm imageFile vào FormData');
@@ -116,7 +116,7 @@ export const getUserActionsApi = async (userId, statusId = null) => {
 
     if (response.success && response.data) {
       const posts = Array.isArray(response.data) ? response.data : [];
-      
+
       // Map posts sang format actions
       // Backend trả về PostsDTO với Id (Guid), cần map đúng
       const actions = posts.map(post => {
@@ -126,12 +126,12 @@ export const getUserActionsApi = async (userId, statusId = null) => {
         // 1 = Pending, 2 = Approved, 3 = Rejected
         const statusId = post.StatusId || post.statusId;
         const postId = post.Id || post.id;
-        
+
         // Log để debug nếu StatusId không hợp lệ
         if (statusId === undefined || statusId === null) {
           console.warn(`[getUserActionsApi] ⚠️ Post ${postId} không có StatusId!`, post);
         }
-        
+
         let status = 'pending'; // Default
         if (statusId === 1) {
           status = 'pending';
@@ -168,9 +168,16 @@ export const getUserActionsApi = async (userId, statusId = null) => {
           ecoTokens: awardedPoints
         } : null;
 
+        // Map user avatar từ PostsDTO
+        const userAvatar = post.UserAvatar || post.userAvatar || '🌱';
+        const userAvatarImage = post.UserAvatarImage || post.userAvatarImage || null;
+
         return {
           id: postId,
           userId: post.UserId || post.userId || userId,
+          userName: post.UserName || post.userName || 'Người dùng',
+          userAvatar: userAvatar,
+          userAvatarImage: userAvatarImage,
           title: post.Title || post.title || '',
           description: post.Content || post.content || '',
           image: imageUrl,
@@ -243,13 +250,13 @@ export const getPendingActionsApi = async () => {
           posts = response.data.data;
         }
       }
-      
+
       console.log('[getPendingActionsApi] Parsed', posts.length, 'pending posts from response');
-      
+
       if (posts.length === 0) {
         console.log('[getPendingActionsApi] ℹ️ No pending posts found (this is normal if there are no pending posts)');
       }
-      
+
       // Map posts sang format actions
       const actions = posts.map(post => {
         const postId = post.Id || post.id;
@@ -327,9 +334,31 @@ export const getPendingActionsApi = async () => {
  */
 export const getApprovedActionsApi = async () => {
   try {
+    console.log('[getApprovedActionsApi] Fetching approved posts from /Post?statusId=2...');
     const response = await apiGet('/Post?statusId=2', false); // Approved posts là public
-    if (response.success && response.data) {
-      const posts = Array.isArray(response.data) ? response.data : (response.data.Data || []);
+    console.log('[getApprovedActionsApi] Full response:', {
+      success: response.success,
+      message: response.message,
+      dataType: Array.isArray(response.data) ? 'array' : typeof response.data,
+      dataLength: Array.isArray(response.data) ? response.data.length : 'N/A',
+      data: response.data
+    });
+
+    if (response.success) {
+      // apiGet đã parse ResponseDTO và trả về response.data là array trực tiếp
+      let posts = [];
+      if (Array.isArray(response.data)) {
+        posts = response.data;
+      } else if (response.data && typeof response.data === 'object') {
+        // Fallback: nếu response.data là object, thử lấy Data property
+        if (Array.isArray(response.data.Data)) {
+          posts = response.data.Data;
+        } else if (Array.isArray(response.data.data)) {
+          posts = response.data.data;
+        }
+      }
+
+      console.log('[getApprovedActionsApi] Parsed', posts.length, 'approved posts from response');
 
       const actions = posts.map(post => {
         const postId = post.Id || post.id;
@@ -361,17 +390,34 @@ export const getApprovedActionsApi = async () => {
           statusId: 2,
           submittedAt: post.SubmittedAt || post.submittedAt,
           approvedRejectedAt: post.ApprovedRejectedAt || post.approvedRejectedAt,
-          reviewedAt: post.ApprovedRejectedAt || post.approvedRejectedAt, // Alias cho ActionHistory
+          reviewedAt: post.ApprovedRejectedAt || post.approvedRejectedAt,
+          comment: '', // Approved posts không có comment từ backend, có thể thêm sau nếu cần
           awardedPoints: awardedPoints,
-          rewards: rewards, // Thêm rewards để ActionHistory có thể hiển thị
+          rewards: rewards,
         };
       });
 
-      return { success: true, data: actions };
+      return {
+        success: true,
+        message: response.message || 'Lấy danh sách hành động đã duyệt thành công',
+        data: actions
+      };
     }
-    return { success: false, data: [] };
+
+    // Nếu response.success = false hoặc không có data, trả về empty array
+    console.warn('[getApprovedActionsApi] Response không thành công hoặc không có data:', response);
+    return {
+      success: false,
+      message: response.message || 'Không thể lấy danh sách hành động đã duyệt',
+      data: []
+    };
   } catch (error) {
-    return { success: false, data: [] };
+    console.error('[getApprovedActionsApi] Error:', error);
+    return {
+      success: false,
+      message: error.message || 'Không thể lấy danh sách hành động đã duyệt',
+      data: []
+    };
   }
 };
 
@@ -381,9 +427,31 @@ export const getApprovedActionsApi = async () => {
  */
 export const getRejectedActionsApi = async () => {
   try {
+    console.log('[getRejectedActionsApi] Fetching rejected posts from /Post?statusId=3...');
     const response = await apiGet('/Post?statusId=3', true); // Cần auth (Moderator/Admin)
-    if (response.success && response.data) {
-      const posts = Array.isArray(response.data) ? response.data : (response.data.Data || []);
+    console.log('[getRejectedActionsApi] Full response:', {
+      success: response.success,
+      message: response.message,
+      dataType: Array.isArray(response.data) ? 'array' : typeof response.data,
+      dataLength: Array.isArray(response.data) ? response.data.length : 'N/A',
+      data: response.data
+    });
+
+    if (response.success) {
+      // apiGet đã parse ResponseDTO và trả về response.data là array trực tiếp
+      let posts = [];
+      if (Array.isArray(response.data)) {
+        posts = response.data;
+      } else if (response.data && typeof response.data === 'object') {
+        // Fallback: nếu response.data là object, thử lấy Data property
+        if (Array.isArray(response.data.Data)) {
+          posts = response.data.Data;
+        } else if (Array.isArray(response.data.data)) {
+          posts = response.data.data;
+        }
+      }
+
+      console.log('[getRejectedActionsApi] Parsed', posts.length, 'rejected posts from response');
 
       const actions = posts.map(post => {
         const postId = post.Id || post.id;
@@ -412,18 +480,35 @@ export const getRejectedActionsApi = async () => {
           statusId: 3,
           submittedAt: post.SubmittedAt || post.submittedAt,
           approvedRejectedAt: post.ApprovedRejectedAt || post.approvedRejectedAt,
-          reviewedAt: post.ApprovedRejectedAt || post.approvedRejectedAt, // Alias cho ActionHistory
+          reviewedAt: post.ApprovedRejectedAt || post.approvedRejectedAt,
+          comment: post.RejectionReason || post.rejectionReason || '', // Map rejectionReason thành comment để hiển thị
           rejectionReason: post.RejectionReason || post.rejectionReason,
           awardedPoints: awardedPoints,
-          rewards: rewards, // Rejected actions không có rewards
+          rewards: rewards,
         };
       });
 
-      return { success: true, data: actions };
+      return {
+        success: true,
+        message: response.message || 'Lấy danh sách hành động đã từ chối thành công',
+        data: actions
+      };
     }
-    return { success: false, data: [] };
+
+    // Nếu response.success = false hoặc không có data, trả về empty array
+    console.warn('[getRejectedActionsApi] Response không thành công hoặc không có data:', response);
+    return {
+      success: false,
+      message: response.message || 'Không thể lấy danh sách hành động đã từ chối',
+      data: []
+    };
   } catch (error) {
-    return { success: false, data: [] };
+    console.error('[getRejectedActionsApi] Error:', error);
+    return {
+      success: false,
+      message: error.message || 'Không thể lấy danh sách hành động đã từ chối',
+      data: []
+    };
   }
 };
 

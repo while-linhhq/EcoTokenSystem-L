@@ -179,12 +179,18 @@
   margin-bottom: 15px;
   border-radius: 10px;
   overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f0f0f0;
 }
 
 .action-image img {
   width: 100%;
-  max-height: 400px;
-  object-fit: cover;
+  height: auto;
+  max-height: none;
+  object-fit: contain;
+  display: block;
 }
 
 .image-placeholder {
@@ -204,6 +210,214 @@
   border-radius: 8px;
   color: #333;
   line-height: 1.6;
+}
+
+.action-reward {
+  margin-bottom: 15px;
+  padding: 12px 15px;
+  background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+  border-radius: 8px;
+  color: #856404;
+  font-weight: 600;
+  border-left: 4px solid #FFD700;
+}
+
+/* List layout cho approved/rejected actions */
+.actions-list-compact {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.action-list-item {
+  display: flex;
+  gap: 16px;
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition: transform 0.2s, box-shadow 0.2s;
+  border: 1px solid #e4e6eb;
+}
+
+.action-list-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.action-list-thumbnail {
+  flex-shrink: 0;
+  width: 120px;
+  height: 120px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #f0f0f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.action-list-thumbnail img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.thumbnail-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 40px;
+  background: #f0f0f0;
+}
+
+.action-list-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.action-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.action-list-user {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.list-user-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #e4e6eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.list-user-avatar-image {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.list-user-name {
+  font-weight: 600;
+  color: #050505;
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.list-status-badge {
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.list-status-badge.status-approved {
+  background: #d4edda;
+  color: #155724;
+}
+
+.list-status-badge.status-rejected {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.action-list-title {
+  font-weight: 600;
+  color: #050505;
+  font-size: 16px;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.action-list-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: #65676b;
+}
+
+.list-time {
+  display: flex;
+  align-items: center;
+}
+
+.list-reward {
+  padding: 2px 8px;
+  background: #fff3cd;
+  color: #856404;
+  border-radius: 6px;
+  font-weight: 600;
+}
+
+.list-comment {
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.4;
+  margin-top: 4px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.list-comment.approved {
+  background: #d4edda;
+  color: #155724;
+  border-left: 3px solid #4a7c2a;
+}
+
+.list-comment.rejected {
+  background: #f8d7da;
+  color: #721c24;
+  border-left: 3px solid #e74c3c;
+}
+
+/* Responsive cho list */
+@media (max-width: 768px) {
+  .action-list-item {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .action-list-thumbnail {
+    width: 100%;
+    height: 200px;
+  }
+
+  .action-list-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
 }
 
 .moderator-comment {

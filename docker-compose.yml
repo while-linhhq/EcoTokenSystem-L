@@ -7,7 +7,7 @@ services:
     container_name: ecotokensystem_sqlserver
     environment:
       - ACCEPT_EULA=Y
-      - SA_PASSWORD=YourStrong@Passw0rd
+      - SA_PASSWORD=YourPassword
     ports:
       - "1433:1433"
     volumes:
@@ -34,7 +34,7 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Docker
       - ASPNETCORE_URLS=http://+:8080
-      - ConnectionStrings__DefaultConnection=Server=sqlserver;Database=EcoTokenDatabase;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=True;MultipleActiveResultSets=true
+      - ConnectionStrings__DefaultConnection=Server=sqlserver;Database=EcoTokenDatabase;User Id=sa;Password=YourPassword;TrustServerCertificate=True;MultipleActiveResultSets=true
     volumes:
       # Mount wwwroot để persist ảnh và static files
       - ./EcoTokenSystem/wwwroot:/app/wwwroot

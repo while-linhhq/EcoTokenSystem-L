@@ -13,19 +13,14 @@ const Leaderboard = () => {
     const loadLeaderboard = async () => {
       try {
         setLoading(true);
-        console.log('[Leaderboard] Loading leaderboard for tab:', activeTab);
         // Load all users (no limit) sorted by activeTab
         const response = await getLeaderboardApi(activeTab, null);
-        console.log('[Leaderboard] Response:', response);
-        if (response.success && response.data) {
-          console.log('[Leaderboard] Setting leaderboard data:', response.data);
+        if (response.success && response.data && Array.isArray(response.data)) {
           setLeaderboard(response.data);
         } else {
-          console.warn('[Leaderboard] Failed to load leaderboard:', response.message);
           setLeaderboard([]);
         }
       } catch (error) {
-        console.error('[Leaderboard] Error loading leaderboard:', error);
         setLeaderboard([]);
       } finally {
         setLoading(false);
@@ -49,20 +44,6 @@ const Leaderboard = () => {
     return '';
   };
 
-  /**
-   * Generate emoji avatar từ userName
-   */
-  const generateAvatarEmoji = (userName) => {
-    if (!userName) return '🌱';
-    
-    const avatars = ['🌱', '🌿', '🍃', '🌳', '🌲', '🌴', '🦋', '🐢', '🦎', '🌍'];
-    // Dùng hash của userName để chọn emoji nhất quán
-    let hash = 0;
-    for (let i = 0; i < userName.length; i++) {
-      hash = userName.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    return avatars[Math.abs(hash) % avatars.length];
-  };
 
   return (
     <div className="leaderboard-container">
@@ -98,10 +79,22 @@ const Leaderboard = () => {
       ) : (
         <div className="leaderboard-list">
           {leaderboard.map((entry, index) => {
-            const isCurrentUser = user && entry.userId === user.id;
+            // So sánh userId (có thể là string hoặc Guid)
+            const entryUserId = entry.userId?.toString() || entry.userId;
+            const currentUserId = user?.id?.toString() || user?.userId?.toString() || user?.id || user?.userId;
+            const isCurrentUser = user && entryUserId === currentUserId;
+
+            // Hiển thị giá trị theo tab đang chọn
+            const primaryValue = activeTab === 'streak'
+              ? `🔥 ${entry.streak || 0} ngày`
+              : `🪙 ${entry.currentPoints || 0} điểm`;
+            const secondaryValue = activeTab === 'streak'
+              ? `🪙 ${entry.currentPoints || 0} điểm`
+              : `🔥 ${entry.streak || 0} ngày`;
+
             return (
               <div
-                key={entry.userId || index}
+                key={entry.userId || entry.userId || index}
                 className={`leaderboard-item ${getRankClass(entry.rank)} ${isCurrentUser ? 'current-user' : ''}`}
               >
                 <div className="rank-badge">
@@ -109,7 +102,21 @@ const Leaderboard = () => {
                 </div>
                 <div className="user-info">
                   <div className="user-avatar">
-                    {generateAvatarEmoji(entry.userName)}
+                    {entry.userAvatarImage ? (
+                      <img
+                        src={entry.userAvatarImage}
+                        alt={entry.userName}
+                        className="leaderboard-avatar-image"
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                          const fallback = e.target.nextSibling;
+                          if (fallback) fallback.style.display = 'flex';
+                        }}
+                      />
+                    ) : null}
+                    <span style={{ display: entry.userAvatarImage ? 'none' : 'flex' }}>
+                      {entry.userAvatar || '🌱'}
+                    </span>
                   </div>
                   <div className="user-details">
                     <div className="user-name">
@@ -117,8 +124,8 @@ const Leaderboard = () => {
                       {isCurrentUser && <span className="you-badge"> (Bạn)</span>}
                     </div>
                     <div className="user-stats">
-                      <span className="stat-item">🪙 {entry.currentPoints || 0} điểm</span>
-                      <span className="stat-item">🔥 {entry.streak || 0} ngày</span>
+                      <span className="stat-item stat-primary">{primaryValue}</span>
+                      <span className="stat-item stat-secondary">{secondaryValue}</span>
                     </div>
                   </div>
                 </div>

@@ -1,4 +1,4 @@
-.login-container {
+.register-container {
   min-height: 100vh;
   display: flex;
   align-items: center;
@@ -7,7 +7,7 @@
   padding: 20px;
 }
 
-.login-card {
+.register-card {
   background: white;
   border-radius: 20px;
   padding: 40px;
@@ -16,48 +16,23 @@
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
 }
 
-.login-header {
+.register-header {
   text-align: center;
   margin-bottom: 30px;
 }
 
-.login-header h1 {
+.register-header h1 {
   font-size: 2.5em;
   margin: 0 0 10px 0;
   color: #2d5016;
 }
 
-.login-header p {
+.register-header p {
   color: #666;
   margin: 0;
 }
 
-.login-tabs {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 25px;
-  border-bottom: 2px solid #e0e0e0;
-}
-
-.login-tabs button {
-  flex: 1;
-  padding: 12px;
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  font-size: 1em;
-  color: #666;
-  border-bottom: 3px solid transparent;
-  transition: all 0.3s;
-}
-
-.login-tabs button.active {
-  color: #4a7c2a;
-  border-bottom-color: #4a7c2a;
-  font-weight: 600;
-}
-
-.login-form {
+.register-form {
   display: flex;
   flex-direction: column;
   gap: 20px;
@@ -88,6 +63,11 @@
   border-color: #4a7c2a;
 }
 
+.form-group input:disabled {
+  background-color: #f5f5f5;
+  cursor: not-allowed;
+}
+
 .error-message {
   color: #e74c3c;
   font-size: 0.9em;
@@ -97,7 +77,7 @@
   border: 1px solid #fcc;
 }
 
-.login-button {
+.register-button {
   background: linear-gradient(135deg, #4a7c2a 0%, #6ba644 100%);
   color: white;
   padding: 14px;
@@ -110,25 +90,31 @@
   margin-top: 10px;
 }
 
-.login-button:hover {
+.register-button:hover:not(:disabled) {
   transform: translateY(-2px);
   box-shadow: 0 5px 15px rgba(74, 124, 42, 0.4);
 }
 
-.login-footer {
+.register-button:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.register-footer {
   text-align: center;
   margin-top: 25px;
   color: #666;
   font-size: 0.9em;
 }
 
-.login-footer a {
+.register-footer a {
   color: #4a7c2a;
   text-decoration: none;
   font-weight: 600;
 }
 
-.login-footer a:hover {
+.register-footer a:hover {
   text-decoration: underline;
 }
 
