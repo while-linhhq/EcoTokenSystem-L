@@ -17,7 +17,7 @@ namespace EcoTokenSystem.Application.Services
     public class PostService : IPostInterface
     {
         private readonly ApplicationDbContext _context;
-        private readonly IWebHostEnvironment _webHostEnvironment;
+        private readonly IStorageService _storageService;
         private readonly ILogger<PostService> _logger;
         // Giữ nguyên hằng số Max File Size
         private const long MaxFileSize = 5 * 1024 * 1024;
@@ -25,38 +25,17 @@ namespace EcoTokenSystem.Application.Services
         private const int PendingStatusId = 1; // Pending status
         private const int RejectedStatusId = 3; // Rejected status
 
-        public PostService(ApplicationDbContext context, IWebHostEnvironment webHostEnvironment, ILogger<PostService> logger)
+        public PostService(ApplicationDbContext context, IStorageService storageService, ILogger<PostService> logger)
         {
             _context = context;
-            _webHostEnvironment = webHostEnvironment;
+            _storageService = storageService;
             _logger = logger;
         }
 
         // --- HÀM PRIVATE: XỬ LÝ FILE UPLOAD ---
         private async Task<string> SaveNewImageAsync(IFormFile imageFile)
         {
-            if (imageFile.Length > MaxFileSize)
-            {
-                throw new InvalidOperationException("Dung lượng tệp tối đa là 5MB.");
-            }
-
-            string uploadFolder = Path.Combine(_webHostEnvironment.WebRootPath, "images"); // Thư mục chung
-            if (!Directory.Exists(uploadFolder))
-            {
-                Directory.CreateDirectory(uploadFolder);
-            }
-
-            // Khắc phục LỖI BẢO MẬT: Tạo tên file DUY NHẤT bằng GUID
-            string extension = Path.GetExtension(imageFile.FileName);
-            string uniqueFileName = Guid.NewGuid().ToString() + extension;
-            string filePath = Path.Combine(uploadFolder, uniqueFileName);
-
-            using (var fileStream = new FileStream(filePath, FileMode.Create))
-            {
-                await imageFile.CopyToAsync(fileStream);
-            }
-
-            return $"/images/{uniqueFileName}";
+            return await _storageService.UploadImageAsync(imageFile, "posts");
         }
 
         // --- 1. TẠO BÀI ĐĂNG (CreatePostAsync) ---

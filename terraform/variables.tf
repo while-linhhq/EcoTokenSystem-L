@@ -88,6 +88,11 @@ variable "s3_bucket_name" {
   type        = string
 }
 
+variable "s3_uploads_bucket_name" {
+  description = "Name of S3 bucket for user uploads (must be globally unique)"
+  type        = string
+}
+
 # ============================================
 # OPTIONAL: ACM CERTIFICATE
 # ============================================
