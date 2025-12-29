@@ -281,7 +281,90 @@
   line-height: 1.6;
 }
 
-@media (max-width: 768px) {
+/* Small phones */
+@media (max-width: 480px) {
+  .history-container {
+    padding: var(--spacing-md);
+  }
+
+  .history-tabs {
+    justify-content: flex-start;
+    overflow-x: auto;
+    padding-bottom: var(--spacing-md);
+    gap: var(--spacing-xs);
+    scrollbar-width: none;
+  }
+
+  .history-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .history-tabs button {
+    white-space: nowrap;
+    padding: var(--spacing-sm) var(--spacing-lg);
+    font-size: var(--font-size-sm);
+  }
+
+  .history-stats {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-md);
+  }
+
+  .stat-card {
+    padding: var(--spacing-lg);
+  }
+
+  .action-item {
+    flex-direction: column;
+    padding: var(--spacing-lg);
+    gap: var(--spacing-md);
+  }
+
+  .action-image-section {
+    width: 100%;
+  }
+
+  .action-image,
+  .image-placeholder {
+    height: 200px;
+    font-size: 3em;
+  }
+
+  .action-header-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--spacing-sm);
+  }
+
+  .action-info h3 {
+    font-size: 1.1em;
+  }
+
+  .status-badge {
+    padding: 6px 12px;
+    font-size: 0.85em;
+  }
+
+  .rewards-section {
+    padding: var(--spacing-md);
+  }
+
+  .rewards-details {
+    gap: var(--spacing-sm);
+  }
+
+  .reward-item {
+    padding: 6px 12px;
+    font-size: 0.9em;
+  }
+}
+
+/* Tablets */
+@media (min-width: 481px) and (max-width: 768px) {
+  .history-container {
+    padding: var(--spacing-lg);
+  }
+
   .action-item {
     flex-direction: column;
   }
@@ -301,17 +384,25 @@
   }
 
   .history-stats {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--spacing-lg);
   }
 
   .history-tabs {
     justify-content: flex-start;
     overflow-x: auto;
-    padding-bottom: 10px;
+    padding-bottom: var(--spacing-md);
   }
 
   .history-tabs button {
     white-space: nowrap;
+  }
+}
+
+/* Desktop optimization */
+@media (min-width: 769px) {
+  .history-stats {
+    grid-template-columns: repeat(3, 1fr);
   }
 }
 

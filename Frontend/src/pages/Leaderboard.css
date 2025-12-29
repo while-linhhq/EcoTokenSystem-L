@@ -181,10 +181,62 @@
   font-size: 0.9em;
 }
 
-@media (max-width: 768px) {
+/* Small phones */
+@media (max-width: 480px) {
+  .leaderboard-container {
+    padding: var(--spacing-md);
+  }
+
   .leaderboard-item {
     flex-wrap: wrap;
-    padding: 15px;
+    padding: var(--spacing-md);
+    gap: var(--spacing-sm);
+  }
+
+  .rank-badge {
+    font-size: 1.8em;
+    min-width: 40px;
+  }
+
+  .rank-number {
+    font-size: 1.1em;
+    min-width: 35px;
+  }
+
+  .user-avatar {
+    width: 45px;
+    height: 45px;
+    font-size: 1.3em;
+  }
+
+  .user-info {
+    gap: var(--spacing-md);
+  }
+
+  .user-name {
+    font-size: 1em;
+  }
+
+  .user-stats {
+    width: 100%;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+    padding-left: 55px;
+  }
+
+  .stat-item {
+    font-size: 0.85em;
+  }
+}
+
+/* Tablets */
+@media (min-width: 481px) and (max-width: 768px) {
+  .leaderboard-container {
+    padding: var(--spacing-lg);
+  }
+
+  .leaderboard-item {
+    padding: var(--spacing-lg);
   }
 
   .rank-badge {
@@ -208,8 +260,15 @@
   }
 
   .user-stats {
-    flex-direction: column;
-    gap: 5px;
+    flex-wrap: wrap;
+    gap: var(--spacing-sm);
+  }
+}
+
+/* Desktop optimization */
+@media (min-width: 769px) {
+  .leaderboard-item:hover {
+    transform: translateX(8px);
   }
 }
 

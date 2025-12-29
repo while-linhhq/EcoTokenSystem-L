@@ -69,20 +69,20 @@ const Layout = ({ children }) => {
         <div className="nav-brand">
           <Link to={isAdm ? "/admin" : (isMod ? "/social" : "/home")} className="brand-link">
             <Sprout size={24} className="brand-icon" />
-            <span>{BRAND_NAME}</span>
+            <span className="brand-name-text">{BRAND_NAME}</span>
           </Link>
           {isAdm && (
             <span className="moderator-badge" style={{ background: 'rgba(255, 215, 0, 0.3)' }}>
-              <Crown size={16} /> Admin
+              <Crown size={16} /> <span className="badge-text">Admin</span>
             </span>
           )}
           {isMod && !isAdm && (
             <span className="moderator-badge">
-              <Shield size={16} /> Moderator
+              <Shield size={16} /> <span className="badge-text">Moderator</span>
             </span>
           )}
         </div>
-        <div className="nav-links">
+        <div className="nav-links desktop-nav">
           {navItems.map(item => {
             const IconComponent = item.icon;
             return (
@@ -99,7 +99,7 @@ const Layout = ({ children }) => {
         </div>
         {user && (
           <div className="nav-user" ref={dropdownRef}>
-            <div 
+            <div
               className="user-info-clickable"
               onClick={() => setDropdownOpen(!dropdownOpen)}
             >
@@ -130,6 +130,24 @@ const Layout = ({ children }) => {
           </div>
         )}
       </nav>
+
+      {/* Mobile Bottom Navigation */}
+      <nav className="bottom-nav">
+        {navItems.slice(0, 5).map(item => {
+          const IconComponent = item.icon;
+          return (
+            <Link
+              key={item.path}
+              to={item.path}
+              className={`bottom-nav-item ${location.pathname === item.path ? 'active' : ''}`}
+            >
+              <IconComponent size={24} className="bottom-nav-icon" />
+              <span className="bottom-nav-label">{item.label}</span>
+            </Link>
+          );
+        })}
+      </nav>
+
       <main className="main-content">
         {children}
       </main>

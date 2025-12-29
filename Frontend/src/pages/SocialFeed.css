@@ -1,23 +1,23 @@
 .social-container {
   max-width: 800px;
   margin: 0 auto;
-  padding: 20px;
+  padding: var(--spacing-container);
 }
 
 .social-header {
   text-align: center;
-  margin-bottom: 30px;
-  color: #2d5016;
+  margin-bottom: var(--spacing-section);
+  color: var(--color-primary-dark);
 }
 
 .social-header h1 {
-  font-size: 2.5em;
-  margin: 0 0 10px 0;
+  font-size: var(--font-size-3xl);
+  margin: 0 0 var(--spacing-md) 0;
 }
 
 .social-header p {
-  font-size: 1.1em;
-  color: #666;
+  font-size: var(--font-size-lg);
+  color: var(--color-text-secondary);
   margin: 0;
 }
 
@@ -30,15 +30,16 @@
 }
 
 .social-tabs button {
-  padding: 12px 25px;
+  padding: var(--spacing-md) var(--spacing-2xl);
   border: none;
   background: transparent;
   cursor: pointer;
-  font-size: 1em;
-  color: #666;
+  font-size: var(--font-size-base);
+  color: var(--color-text-secondary);
   border-bottom: 3px solid transparent;
-  transition: all 0.3s;
+  transition: all var(--transition-base);
   font-weight: 600;
+  min-height: var(--touch-target-min);
 }
 
 .social-tabs button.active {
@@ -281,9 +282,9 @@
   padding: 4px 0;
   border-top: 1px solid #e4e6eb;
   border-bottom: 1px solid #e4e6eb;
-  margin: 0 -16px;
-  padding-left: 16px;
-  padding-right: 16px;
+  margin: 0;
+  padding-left: 0;
+  padding-right: 0;
 }
 
 .action-btn {
@@ -429,9 +430,88 @@
 }
 
 
-@media (max-width: 768px) {
+/* Small phones */
+@media (max-width: 480px) {
+  .social-container {
+    padding: var(--spacing-md);
+  }
+
+  .social-header {
+    margin-bottom: var(--spacing-xl);
+  }
+
+  .social-tabs {
+    gap: var(--spacing-xs);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .social-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .social-tabs button {
+    padding: var(--spacing-sm) var(--spacing-lg);
+    font-size: var(--font-size-sm);
+    white-space: nowrap;
+  }
+
   .stories-container {
-    gap: 10px;
+    gap: var(--spacing-sm);
+  }
+
+  .story-content {
+    width: 90px;
+    height: 140px;
+  }
+
+  .story-avatar,
+  .story-avatar-image {
+    width: 56px;
+    height: 56px;
+  }
+
+  .story-name {
+    font-size: 0.75em;
+  }
+
+  .post-card {
+    padding: var(--spacing-md);
+  }
+
+  .post-image {
+    font-size: 3.5em;
+  }
+
+  .action-btn {
+    padding: var(--spacing-sm);
+    font-size: 0.85em;
+    gap: var(--spacing-xs);
+  }
+
+  .comment-input-container {
+    gap: var(--spacing-xs);
+  }
+
+  .comment-input {
+    padding: var(--spacing-sm) var(--spacing-md);
+    font-size: 0.9em;
+  }
+
+  .comment-submit-btn {
+    padding: var(--spacing-sm) var(--spacing-md);
+    font-size: 0.9em;
+  }
+}
+
+/* Tablets */
+@media (min-width: 481px) and (max-width: 768px) {
+  .social-container {
+    padding: var(--spacing-lg);
+  }
+
+  .stories-container {
+    gap: var(--spacing-md);
   }
 
   .story-content {
@@ -444,11 +524,18 @@
   }
 
   .comment-input-container {
-    flex-direction: column;
+    gap: var(--spacing-sm);
+  }
+}
+
+/* Desktop optimization */
+@media (min-width: 769px) {
+  .action-btn {
+    transition: all var(--transition-base);
   }
 
-  .comment-submit-btn {
-    width: 100%;
+  .action-btn:active {
+    transform: scale(0.95);
   }
 }
 
