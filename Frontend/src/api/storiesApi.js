@@ -4,6 +4,8 @@
  * API functions for managing user stories (24-hour temporary posts)
  */
 
+import { apiGet, apiPost, apiDelete } from './apiClient';
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5109/api';
 
 /**
@@ -12,19 +14,9 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5109
  */
 export const getStoriesApi = async () => {
   try {
-    const response = await fetch(`${API_BASE_URL}/Stories`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to fetch stories');
-    }
-
-    const data = await response.json();
-    return { success: true, data: data || [] };
+    // Public endpoint - no authentication required
+    const result = await apiGet('/Stories', false);
+    return { success: true, data: result.data || [] };
   } catch (error) {
     console.error('Error fetching stories:', error);
     return { success: false, message: error.message, data: [] };
@@ -38,19 +30,9 @@ export const getStoriesApi = async () => {
  */
 export const getUserStoriesApi = async (userId) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/Stories/user/${userId}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to fetch user stories');
-    }
-
-    const data = await response.json();
-    return { success: true, data: data || [] };
+    // Public endpoint - no authentication required
+    const result = await apiGet(`/Stories/user/${userId}`, false);
+    return { success: true, data: result.data || [] };
   } catch (error) {
     console.error('Error fetching user stories:', error);
     return { success: false, message: error.message, data: [] };
@@ -64,18 +46,9 @@ export const getUserStoriesApi = async (userId) => {
  */
 export const uploadStoryApi = async (formData) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/Stories`, {
-      method: 'POST',
-      body: formData,
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Failed to upload story');
-    }
-
-    const data = await response.json();
-    return { success: true, data, message: 'Story đã được đăng!' };
+    // Authentication required + FormData
+    const result = await apiPost('/Stories', formData, true, true);
+    return { success: true, data: result.data, message: 'Story đã được đăng!' };
   } catch (error) {
     console.error('Error uploading story:', error);
     return { success: false, message: error.message };
@@ -90,20 +63,9 @@ export const uploadStoryApi = async (formData) => {
  */
 export const viewStoryApi = async (storyId, viewerId) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/Stories/${storyId}/view`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ viewerId }),
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to mark story as viewed');
-    }
-
-    const data = await response.json();
-    return { success: true, data };
+    // Authentication required
+    const result = await apiPost(`/Stories/${storyId}/view`, { viewerId }, true);
+    return { success: true, data: result.data };
   } catch (error) {
     console.error('Error viewing story:', error);
     return { success: false, message: error.message };
@@ -117,17 +79,8 @@ export const viewStoryApi = async (storyId, viewerId) => {
  */
 export const deleteStoryApi = async (storyId) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/Stories/${storyId}`, {
-      method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to delete story');
-    }
-
+    // Authentication required
+    const result = await apiDelete(`/Stories/${storyId}`, true);
     return { success: true, message: 'Story đã được xóa' };
   } catch (error) {
     console.error('Error deleting story:', error);

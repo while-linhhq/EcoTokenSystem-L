@@ -114,8 +114,9 @@ namespace EcoTokenSystem.API.Controllers
         }
 
         [HttpPatch("me")]
+        [Consumes("multipart/form-data")]
         [Authorize] // Cần authorize để lấy token
-        public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileRequestDTO request)
+        public async Task<IActionResult> UpdateProfile([FromForm] UpdateProfileRequestDTO request)
         {
 
             if (!ModelState.IsValid)

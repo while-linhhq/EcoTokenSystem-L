@@ -215,91 +215,11 @@ export const getCurrentUserApi = async () => {
  * Update user profile API
  * PATCH /api/User/me
  */
-export const updateUserApi = async (userId, updatedData) => {
+export const updateUserApi = async (formData) => {
   try {
-    // Map frontend data sang backend format
-    // Backend UpdateProfileRequestDTO yêu cầu tất cả fields Required
-    // Cần lấy giá trị hiện tại từ user nếu không có trong updatedData
-    
-    // Lấy thông tin user hiện tại trước
-    const currentUserResponse = await getCurrentUserApi().catch(() => null);
-    const currentUser = currentUserResponse?.data || {};
-    
-    // Map dateOfBirth - Backend cần DateOnly format (YYYY-MM-DD)
-    let dateOfBirth = null;
-    if (updatedData.dateOfBirth) {
-      const date = new Date(updatedData.dateOfBirth);
-      dateOfBirth = date.toISOString().split('T')[0]; // Format: YYYY-MM-DD
-    } else if (currentUser.dateOfBirth) {
-      const date = new Date(currentUser.dateOfBirth);
-      dateOfBirth = date.toISOString().split('T')[0];
-    } else {
-      // Backend yêu cầu DateOfBirth là required, nếu không có thì dùng ngày hiện tại
-      dateOfBirth = new Date().toISOString().split('T')[0];
-    }
-
-    // Lấy Name - nickname và name là một
-    const name = updatedData.name ||
-                 updatedData.nickname || 
-                 currentUser.name || 
-                 currentUser.Name || 
-                 currentUser.nickname || 
-                 currentUser.fullName ||
-                 currentUser.username || 
-                 'Người dùng'; // Default value thay vì empty string
-
-    // Lấy Gender - ưu tiên: updatedData.gender > currentUser.gender/Gender > default
-    const gender = updatedData.gender || 
-                   currentUser.gender || 
-                   currentUser.Gender || 
-                   'Khác'; // Default value thay vì empty string
-
-    // Lấy PhoneNumber - ưu tiên: updatedData.phoneNumber/phone > currentUser.phoneNumber/PhoneNumber > default
-    const phoneNumber = updatedData.phoneNumber || 
-                        updatedData.phone || 
-                        currentUser.phoneNumber || 
-                        currentUser.PhoneNumber || 
-                        '0000000000'; // Default value thay vì empty string
-
-    // Lấy Address - ưu tiên: updatedData.address > currentUser.address/Address > default
-    const address = updatedData.address || 
-                    currentUser.address || 
-                    currentUser.Address || 
-                    'Chưa cập nhật'; // Default value thay vì empty string
-
-    // Lấy Email - ưu tiên: updatedData.email > currentUser.email/Email > default
-    const email = updatedData.email || 
-                  currentUser.email || 
-                  currentUser.Email || 
-                  ''; // Email không bắt buộc, có thể để trống
-
-    // Lấy Avatar - ưu tiên: updatedData.avatar > currentUser.avatar/Avatar > default
-    // Nếu avatarType là 'image' và có avatarImage, lưu URL hoặc base64 (tùy backend)
-    // Nếu avatarType là 'emoji', lưu emoji string
-    let avatar = '';
-    if (updatedData.avatarType === 'image' && updatedData.avatarImage) {
-      // Nếu có ảnh, có thể lưu base64 hoặc URL (tùy backend yêu cầu)
-      // Tạm thời lưu emoji đặc biệt để đánh dấu có ảnh, hoặc lưu base64
-      avatar = updatedData.avatarImage; // Lưu base64 hoặc URL
-    } else if (updatedData.avatar) {
-      avatar = updatedData.avatar; // Emoji
-    } else {
-      avatar = currentUser.avatar || 
-               currentUser.Avatar || 
-               '🌱'; // Default emoji
-    }
-
-    const backendData = {
-      name: name,
-      email: email,
-      avatar: avatar,
-      phoneNumber: phoneNumber,
-      address: address,
-      gender: gender,
-      dateOfBirth: dateOfBirth,
-    };
-
-    const response = await apiPatch('/User/me', backendData, true);
+    // formData is now FormData object, not plain object
+    // Use apiPatch with includeAuth=true and isFormData=true
+    const response = await apiPatch('/User/me', formData, true, true);
 
     if (response.success) {
       // Backend trả về ResponseDTO<ResponseUserProfileDTO> với Data chứa user mới
