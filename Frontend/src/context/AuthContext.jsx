@@ -185,7 +185,7 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem('user', JSON.stringify(userData));
   };
 
-  const updateUser = useCallback(async (updatedData) => {
+  const updateUser = useCallback(async (formData) => {
     try {
       // CRITICAL: Lấy token từ user hiện tại hoặc localStorage trước khi update
       const currentToken = user?.token || (() => {
@@ -204,20 +204,11 @@ export const AuthProvider = ({ children }) => {
       const currentUserId = user?.id || user?.userId;
 
       if (!currentUserId) {
-        // Nếu không có user.id, chỉ merge data và giữ token
-        const updatedUser = {
-          ...(user || {}),
-          ...updatedData,
-          token: currentToken || user?.token, // Đảm bảo giữ lại token
-          id: user?.id || user?.userId,
-          userId: user?.userId || user?.id
-        };
-        setUser(updatedUser);
-        localStorage.setItem('user', JSON.stringify(updatedUser));
-        return { success: true };
+        return { success: false, message: 'Chưa đăng nhập' };
       }
 
-      const response = await updateUserApi(currentUserId, updatedData);
+      // formData is now FormData object - pass directly to API
+      const response = await updateUserApi(formData);
       if (response.success) {
         // CRITICAL: Backend không trả về token, nên phải giữ lại từ user hiện tại
         const updatedUserData = {

@@ -16,6 +16,7 @@ const Profile = () => {
   const [notifications, setNotifications] = useState(user?.notifications ?? true);
   const [avatar, setAvatar] = useState(user?.avatar || '🌱');
   const [avatarImage, setAvatarImage] = useState(user?.avatarImage || null);
+  const [avatarFile, setAvatarFile] = useState(null); // Store File object for upload
   const [avatarType, setAvatarType] = useState(user?.avatarImage ? 'image' : 'emoji'); // 'emoji' or 'image'
 
   // Password change form
@@ -87,9 +88,9 @@ const Profile = () => {
   const handleAvatarImageUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
-      // Check file size (max 2MB)
-      if (file.size > 2 * 1024 * 1024) {
-        alert('Kích thước ảnh không được vượt quá 2MB');
+      // Check file size (max 5MB to match S3StorageService limit)
+      if (file.size > 5 * 1024 * 1024) {
+        alert('Kích thước ảnh không được vượt quá 5MB');
         return;
       }
 
@@ -99,9 +100,13 @@ const Profile = () => {
         return;
       }
 
+      // Store File object for upload
+      setAvatarFile(file);
+
+      // Create base64 preview for UI
       const reader = new FileReader();
       reader.onloadend = () => {
-        setAvatarImage(reader.result);
+        setAvatarImage(reader.result); // Preview only
         setAvatarType('image');
       };
       reader.readAsDataURL(file);
@@ -110,6 +115,7 @@ const Profile = () => {
 
   const handleRemoveAvatarImage = () => {
     setAvatarImage(null);
+    setAvatarFile(null); // Clear File object
     setAvatarType('emoji');
     if (!avatar) {
       setAvatar('🌱');
@@ -136,25 +142,28 @@ const Profile = () => {
     setSaveMessage('');
 
     try {
+      // Create FormData for multipart/form-data upload
+      const formData = new FormData();
+
       // Nickname và name là một - dùng nickname làm name cho backend
       const nameToSave = nickname.trim() || user.nickname || user.name || user.fullName || '';
 
-      const updatedData = {
-        name: nameToSave, // Backend yêu cầu 'name' field - dùng nickname
-        nickname: nameToSave, // Nickname và name là một
-        email: email.trim() || user.email || '',
-        phone: phone.trim() || user.phone || '',
-        phoneNumber: phone.trim() || user.phone || user.phoneNumber || '', // Backend yêu cầu 'phoneNumber' field
-        dateOfBirth: dateOfBirth || user.dateOfBirth || null,
-        gender: gender || user.gender || 'Khác',
-        address: address.trim() || user.address || '',
-        notifications,
-        avatar: avatarType === 'image' ? (avatarImage || avatar) : avatar,
-        avatarImage: avatarType === 'image' ? avatarImage : null,
-        avatarType: avatarType // Gửi loại avatar để backend xử lý
-      };
+      // Add all profile fields
+      formData.append('name', nameToSave);
+      if (email?.trim()) formData.append('email', email.trim());
+      if (phone?.trim()) formData.append('phoneNumber', phone.trim());
+      if (dateOfBirth) formData.append('dateOfBirth', dateOfBirth);
+      if (gender) formData.append('gender', gender);
+      if (address?.trim()) formData.append('address', address.trim());
 
-      const result = await updateUser(updatedData);
+      // Add avatar
+      if (avatarType === 'image' && avatarFile) {
+        formData.append('avatar', avatarFile); // Send File object
+      } else if (avatarType === 'emoji' && avatar) {
+        formData.append('avatarEmoji', avatar); // Send emoji character
+      }
+
+      const result = await updateUser(formData);
 
       if (result.success) {
         setSaveMessage('success');

@@ -15,10 +15,13 @@ namespace EcoTokenSystem.Application.Services
     {
         private readonly ApplicationDbContext dbContext;
         private readonly ITokenService _tokenService;
-        public UserService(ApplicationDbContext dbContext , ITokenService tokenService)
+        private readonly IStorageService _storageService;
+
+        public UserService(ApplicationDbContext dbContext, ITokenService tokenService, IStorageService storageService)
         {
             this.dbContext = dbContext;
             _tokenService = tokenService;
+            _storageService = storageService;
         }
 
         
@@ -193,8 +196,28 @@ namespace EcoTokenSystem.Application.Services
 
             userDomain.Name = request.Name;
             userDomain.Email = request.Email ?? string.Empty;
-            userDomain.Avatar = request.Avatar ?? string.Empty;
-            userDomain.PhoneNumber = request.PhoneNumber;   
+
+            // Handle avatar update
+            if (request.Avatar != null && request.Avatar.Length > 0)
+            {
+                // User uploaded a new image
+                // Delete old avatar if it exists and is from cloud storage (not emoji, not base64)
+                if (!string.IsNullOrEmpty(userDomain.Avatar) && _storageService.IsCloudUrl(userDomain.Avatar))
+                {
+                    await _storageService.DeleteImageAsync(userDomain.Avatar);
+                }
+
+                // Upload new avatar to S3/FileSystem
+                userDomain.Avatar = await _storageService.UploadImageAsync(request.Avatar, "avatars");
+            }
+            else if (!string.IsNullOrEmpty(request.AvatarEmoji))
+            {
+                // User selected an emoji
+                userDomain.Avatar = request.AvatarEmoji;
+            }
+            // If both Avatar and AvatarEmoji are null/empty, keep existing avatar (no change)
+
+            userDomain.PhoneNumber = request.PhoneNumber;
             userDomain.Address = request.Address;
             userDomain.Gender = request.Gender;
 
