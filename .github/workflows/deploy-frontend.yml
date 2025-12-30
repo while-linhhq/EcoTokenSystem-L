@@ -18,6 +18,10 @@ env:
 
   # CloudFront Configuration
   CLOUDFRONT_DISTRIBUTION_ID: E2O1UIN20NRIHM
+  CLOUDFRONT_DOMAIN: d1j604m1z074dh.cloudfront.net
+
+  # Backend API Configuration
+  BACKEND_API_URL: https://d1j604m1z074dh.cloudfront.net/api
 
   # Node.js Configuration
   NODE_VERSION: '20'
@@ -63,7 +67,7 @@ jobs:
       - name: Build frontend
         working-directory: ./${{ env.FRONTEND_DIR }}
         env:
-          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
+          VITE_API_BASE_URL: ${{ env.BACKEND_API_URL }}
         run: |
           echo "Building frontend with API URL: $VITE_API_BASE_URL"
           npm run build
@@ -163,7 +167,7 @@ jobs:
       - name: Verify frontend deployment
         run: |
           echo "Verifying frontend is accessible..."
-          FRONTEND_URL="${{ secrets.FRONTEND_URL }}"
+          FRONTEND_URL="https://${{ env.CLOUDFRONT_DOMAIN }}"
 
           sleep 5  # Wait a bit for CloudFront
 
@@ -187,7 +191,7 @@ jobs:
           echo "===================================="
           echo "S3 Bucket: s3://${{ env.S3_BUCKET }}"
           echo "CloudFront Distribution: ${{ env.CLOUDFRONT_DISTRIBUTION_ID }}"
-          echo "Frontend URL: ${{ secrets.FRONTEND_URL }}"
-          echo "API Base URL: ${{ secrets.VITE_API_BASE_URL }}"
+          echo "Frontend URL: https://${{ env.CLOUDFRONT_DOMAIN }}"
+          echo "API Base URL: ${{ env.BACKEND_API_URL }}"
           echo "Git SHA: ${{ github.sha }}"
           echo "Git Ref: ${{ github.ref }}"
