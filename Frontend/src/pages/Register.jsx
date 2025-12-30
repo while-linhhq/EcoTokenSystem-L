@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { registerApi } from '../api/authApi';
+import { showSuccess } from '../utils/toast';
+import { BRAND_NAME, SLOGAN, BRAND_EMOJI } from '../constants/branding';
 import './Register.css';
 
 const Register = () => {
@@ -54,8 +56,8 @@ const Register = () => {
       });
 
       if (result.success) {
-        alert(result.message || 'Đăng ký thành công! Vui lòng đăng nhập.');
-        navigate('/login');
+        showSuccess(result.message || 'Đăng ký thành công! Vui lòng đăng nhập.');
+        setTimeout(() => navigate('/login'), 1000);
       } else {
         setError(result.message || 'Đăng ký thất bại');
       }
@@ -70,8 +72,8 @@ const Register = () => {
     <div className="register-container">
       <div className="register-card">
         <div className="register-header">
-          <h1>🌱 EcoToken</h1>
-          <p>Tạo tài khoản mới</p>
+          <h1>{BRAND_EMOJI} {BRAND_NAME}</h1>
+          <p>{SLOGAN}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="register-form">

@@ -3,41 +3,95 @@ import { useAuth } from '../context/AuthContext';
 import { getApprovedPostsApi } from '../api/postsApi';
 import { toggleLikeApi } from '../api/likesApi';
 import { createCommentApi, deleteCommentApi } from '../api/commentsApi';
+import { getStoriesApi } from '../api/storiesApi';
 import { formatTimeAgo } from '../utils/dateUtils';
+import { showSuccess, showError } from '../utils/toast';
+import { Plus } from 'lucide-react';
+import StoryCircle from '../components/Stories/StoryCircle';
+import StoryUpload from '../components/Stories/StoryUpload';
+import StoryViewer from '../components/Stories/StoryViewer';
 import './SocialFeed.css';
 
 const SocialFeed = () => {
   const { user, isAuthenticated } = useAuth();
-  const [activeTab, setActiveTab] = useState('feed'); // 'feed' or 'stories'
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [commentInputs, setCommentInputs] = useState({}); // postId -> comment text
   const [expandedComments, setExpandedComments] = useState(new Set()); // postIds with expanded comments
 
+  // Stories state
+  const [stories, setStories] = useState([]);
+  const [storiesLoading, setStoriesLoading] = useState(false);
+  const [showStoryUpload, setShowStoryUpload] = useState(false);
+  const [showStoryViewer, setShowStoryViewer] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState(null);
+
   // Load approved posts from backend
   useEffect(() => {
     loadPosts();
+    loadStories();
   }, []);
 
-  // Calculate level from streak (simple formula)
-  const calculateLevel = (streak) => {
-    return Math.floor(streak / 5) + 1;
+  // Load stories from backend
+  const loadStories = async () => {
+    try {
+      setStoriesLoading(true);
+      const response = await getStoriesApi();
+
+      if (response.success && response.data) {
+        // Group stories by user
+        const groupedStories = {};
+        response.data.forEach(story => {
+          const userId = story.userId;
+          if (!groupedStories[userId]) {
+            groupedStories[userId] = [];
+          }
+          groupedStories[userId].push(story);
+        });
+
+        // Convert to array of user stories
+        const storiesArray = Object.values(groupedStories);
+
+        // Sort: current user first, then by most recent story
+        storiesArray.sort((a, b) => {
+          const aHasCurrentUser = a[0].userId === user?.id;
+          const bHasCurrentUser = b[0].userId === user?.id;
+
+          if (aHasCurrentUser && !bHasCurrentUser) return -1;
+          if (!aHasCurrentUser && bHasCurrentUser) return 1;
+
+          // Sort by most recent story
+          const aLatest = new Date(a[0].createdAt);
+          const bLatest = new Date(b[0].createdAt);
+          return bLatest - aLatest;
+        });
+
+        setStories(storiesArray);
+      }
+    } catch (error) {
+      console.error('Error loading stories:', error);
+    } finally {
+      setStoriesLoading(false);
+    }
   };
 
-  // Mock data for stories (tạm thời dùng posts đã approved)
-  const stories = posts.slice(0, 4).map(post => ({
-    id: post.id,
-    user: {
-      name: post.userName || 'Người dùng',
-      avatar: post.userAvatar || '🌱',
-      avatarImage: post.userAvatarImage || null
-    },
-    image: post.imageUrl || '🌱'
-  }));
+  // Story handlers
+  const handleStoryClick = (_userStories, userId) => {
+    setSelectedUserId(userId);
+    setShowStoryViewer(true);
+  };
+
+  const handleStoryUploadSuccess = () => {
+    loadStories(); // Reload stories
+  };
+
+  const handleStoryDeleted = () => {
+    loadStories(); // Reload stories
+  };
 
   const handleLike = async (postId) => {
     if (!isAuthenticated) {
-      alert('Vui lòng đăng nhập để thích bài viết');
+      showError('Vui lòng đăng nhập để thích bài viết');
       return;
     }
 
@@ -47,23 +101,23 @@ const SocialFeed = () => {
         // Reload posts to get updated like count
         await loadPosts();
       } else {
-        alert(response.message || 'Không thể thực hiện thao tác thích');
+        showError(response.message || 'Không thể thực hiện thao tác thích');
       }
     } catch (error) {
       console.error('Error toggling like:', error);
-      alert(error.message || 'Có lỗi xảy ra khi thích bài viết');
+      showError(error.message || 'Có lỗi xảy ra khi thích bài viết');
     }
   };
 
   const handleComment = async (postId) => {
     if (!isAuthenticated) {
-      alert('Vui lòng đăng nhập để bình luận');
+      showError('Vui lòng đăng nhập để bình luận');
       return;
     }
 
     const commentText = commentInputs[postId]?.trim();
     if (!commentText) {
-      alert('Vui lòng nhập nội dung bình luận');
+      showError('Vui lòng nhập nội dung bình luận');
       return;
     }
 
@@ -74,16 +128,17 @@ const SocialFeed = () => {
         setCommentInputs(prev => ({ ...prev, [postId]: '' }));
         // Reload posts to get updated comments
         await loadPosts();
+        showSuccess('Đã thêm bình luận');
       } else {
-        alert(response.message || 'Không thể thêm bình luận');
+        showError(response.message || 'Không thể thêm bình luận');
       }
     } catch (error) {
       console.error('Error creating comment:', error);
-      alert(error.message || 'Có lỗi xảy ra khi thêm bình luận');
+      showError(error.message || 'Có lỗi xảy ra khi thêm bình luận');
     }
   };
 
-  const handleDeleteComment = async (commentId, postId) => {
+  const handleDeleteComment = async (commentId) => {
     if (!isAuthenticated) {
       return;
     }
@@ -97,12 +152,13 @@ const SocialFeed = () => {
       if (response.success) {
         // Reload posts to get updated comments
         await loadPosts();
+        showSuccess('Đã xóa bình luận');
       } else {
-        alert(response.message || 'Không thể xóa bình luận');
+        showError(response.message || 'Không thể xóa bình luận');
       }
     } catch (error) {
       console.error('Error deleting comment:', error);
-      alert(error.message || 'Có lỗi xảy ra khi xóa bình luận');
+      showError(error.message || 'Có lỗi xảy ra khi xóa bình luận');
     }
   };
 
@@ -230,41 +286,41 @@ const SocialFeed = () => {
         <p>Cùng nhau trao đổi và truyền cảm hứng sống xanh</p>
       </div>
 
-      <div className="social-tabs">
-        <button
-          className={activeTab === 'feed' ? 'active' : ''}
-          onClick={() => setActiveTab('feed')}
-        >
-          📰 Feed
-        </button>
-        <button
-          className={activeTab === 'stories' ? 'active' : ''}
-          onClick={() => setActiveTab('stories')}
-        >
-          📸 Stories
-        </button>
+
+      {/* Stories Section - shown above feed */}
+      <div className="stories-container">
+        <div className="stories-header">
+          <h3>Stories</h3>
+          {isAuthenticated && (
+            <button
+              className="stories-add-btn"
+              onClick={() => setShowStoryUpload(true)}
+            >
+              <Plus size={16} />
+              Tạo Story
+            </button>
+          )}
+        </div>
+        <div className="stories-list">
+          {storiesLoading ? (
+            <div className="stories-empty">Đang tải Stories...</div>
+          ) : stories.length > 0 ? (
+            stories.map((userStories, index) => (
+              <StoryCircle
+                key={index}
+                userStories={userStories}
+                currentUserId={user?.id}
+                onClick={handleStoryClick}
+              />
+            ))
+          ) : (
+            <div className="stories-empty">Chưa có Story nào</div>
+          )}
+        </div>
       </div>
 
-      {activeTab === 'stories' && (
-        <div className="stories-section">
-          <div className="stories-container">
-            {stories.map(story => (
-              <div key={story.id} className="story-item">
-                {story.user.avatarImage ? (
-              <img src={story.user.avatarImage} alt={story.user.name} className="story-avatar-image" />
-            ) : (
-              <div className="story-avatar">{story.user.avatar}</div>
-            )}
-                <div className="story-content">{story.image}</div>
-                <div className="story-name">{story.user.name}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {activeTab === 'feed' && (
-        <div className="feed-section">
+      {/* Feed Section */}
+      <div className="feed-section">
           {loading ? (
             <div className="loading-state">
               <p>Đang tải bài đăng...</p>
@@ -438,7 +494,7 @@ const SocialFeed = () => {
                                       {isAuthenticated && user && (comment.userId === user.id || comment.UserId === user.id) && (
                                         <button
                                           className="comment-delete-btn"
-                                          onClick={() => handleDeleteComment(comment.id || comment.Id, post.id)}
+                                          onClick={() => handleDeleteComment(comment.id || comment.Id)}
                                         >
                                           Xóa
                                         </button>
@@ -459,6 +515,24 @@ const SocialFeed = () => {
             })
           )}
         </div>
+
+      {/* Story Upload Modal */}
+      <StoryUpload
+        isOpen={showStoryUpload}
+        onClose={() => setShowStoryUpload(false)}
+        onUploadSuccess={handleStoryUploadSuccess}
+        currentUserId={user?.id}
+      />
+
+      {/* Story Viewer Modal */}
+      {showStoryViewer && (
+        <StoryViewer
+          allStories={stories}
+          initialUserId={selectedUserId}
+          currentUserId={user?.id}
+          onClose={() => setShowStoryViewer(false)}
+          onStoryDeleted={handleStoryDeleted}
+        />
       )}
     </div>
   );

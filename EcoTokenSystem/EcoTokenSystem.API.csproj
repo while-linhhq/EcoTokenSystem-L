@@ -20,7 +20,9 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    
+    <PackageReference Include="AWSSDK.S3" Version="3.7.308" />
+    <PackageReference Include="AWSSDK.Extensions.NETCore.Setup" Version="3.7.7" />
+
     <ProjectReference Include="..\EcoTokenSystem.Application\EcoTokenSystem.Application.csproj" />
     <ProjectReference Include="..\EcoTokenSystem.Infrastructure\EcoTokenSystem.Infrastructure.csproj" />
   </ItemGroup>

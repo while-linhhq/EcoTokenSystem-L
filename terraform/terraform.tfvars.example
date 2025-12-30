@@ -26,6 +26,7 @@ ecr_repository_name = "ecotokensystem-backend"
 
 # S3 Bucket for Frontend (must be globally unique)
 s3_bucket_name = "ecotokensystem"  # CHANGE THIS! Must be unique globally
+s3_uploads_bucket_name = "ecotokensystem-uploads-260820061600"  # CHANGE THIS! Must be unique globally
 
 # Optional: ACM Certificate ARN for HTTPS
 # Uncomment and add your certificate ARN if you have one

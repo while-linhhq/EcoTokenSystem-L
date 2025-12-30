@@ -384,6 +384,38 @@ terraform destroy
 
 **Warning**: Terraform destroy will PERMANENTLY DELETE the database! Backup first if needed.
 
+## 📦 AWS Resources (Current Deployment)
+
+### Account Information
+- **AWS Account ID**: `260820061600`
+- **AWS Region**: `us-east-1`
+
+### S3 & CloudFront
+- **Frontend Bucket**: `ecotokensystem`
+- **Frontend CDN**: `d1j604m1z074dh.cloudfront.net` → https://d1j604m1z074dh.cloudfront.net
+- **Uploads Bucket**: `ecotokensystem-uploads-260820061600`
+- **Uploads CDN**: `d3cbsrjon1d0kj.cloudfront.net` → https://d3cbsrjon1d0kj.cloudfront.net
+
+### Backend Services
+- **ALB URL**: http://ecotokensystem-alb-1085504532.us-east-1.elb.amazonaws.com
+- **RDS Endpoint**: `ecotokensystem-db.c2bqekuuegbv.us-east-1.rds.amazonaws.com:1433`
+- **ECR Repository**: `260820061600.dkr.ecr.us-east-1.amazonaws.com/ecotokensystem-backend`
+
+### Image Storage
+**Production URLs**:
+- Posts: `https://d3cbsrjon1d0kj.cloudfront.net/posts/{guid}.jpg`
+- Items: `https://d3cbsrjon1d0kj.cloudfront.net/items/{guid}.jpg`
+
+**Environment Variables (ECS)**:
+```
+AWS__Region=us-east-1
+AWS__S3BucketName=ecotokensystem-uploads-260820061600
+AWS__CloudFrontDomain=d3cbsrjon1d0kj.cloudfront.net
+AWS__UseS3Storage=true
+```
+
+---
+
 ## 📚 Additional Resources
 
 - [Terraform AWS Provider Docs](https://registry.terraform.io/providers/hashicorp/aws/latest/docs)

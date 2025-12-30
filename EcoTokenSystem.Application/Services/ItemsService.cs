@@ -16,11 +16,13 @@ namespace EcoTokenSystem.Application.Services
     public class ItemsService : IItemsInterface
     {
         private readonly ApplicationDbContext dbContext;
+        private readonly IStorageService _storageService;
         private readonly IWebHostEnvironment webHostEnvironment;
         private const long MaxFileSize = 5 * 1024 * 1024;
-        public ItemsService(ApplicationDbContext dbContext, IWebHostEnvironment webHostEnvironment)
+        public ItemsService(ApplicationDbContext dbContext, IStorageService storageService, IWebHostEnvironment webHostEnvironment)
         {
             this.dbContext = dbContext;
+            _storageService = storageService;
             this.webHostEnvironment = webHostEnvironment;
         }
 
@@ -207,7 +209,7 @@ namespace EcoTokenSystem.Application.Services
                 try
                 {
                     // A. XÓA FILE CŨ trước
-                    DeleteOldImage(itemDomain.ImageUrl);
+                    await DeleteOldImage(itemDomain.ImageUrl);
 
                     // B. Lưu FILE MỚI và nhận URL mới
                     imageUrl = await SaveNewImageAsync(request.ImageItem);
@@ -239,42 +241,12 @@ namespace EcoTokenSystem.Application.Services
 
         private async Task<string> SaveNewImageAsync(IFormFile imageFile)
         {
-            if (imageFile.Length > MaxFileSize)
-            {
-                throw new InvalidOperationException("Dung lượng tệp tối đa là 5MB.");
-            }
-
-            string uploadFolder = Path.Combine(webHostEnvironment.WebRootPath, "imagesItem");
-            if (!Directory.Exists(uploadFolder))
-            {
-                Directory.CreateDirectory(uploadFolder);
-            }
-
-            // Khắc phục LỖI BẢO MẬT: Tạo tên file DUY NHẤT bằng GUID
-            string extension = Path.GetExtension(imageFile.FileName);//đuôi .jpg,...
-            string uniqueFileName = Guid.NewGuid().ToString() + extension;
-            string filePath = Path.Combine(uploadFolder, uniqueFileName);
-
-            using (var fileStream = new FileStream(filePath, FileMode.Create))
-            {
-                await imageFile.CopyToAsync(fileStream);
-            }
-
-            // Trả về URL để lưu vào DB
-            return $"/imagesItem/{uniqueFileName}";
+            return await _storageService.UploadImageAsync(imageFile, "items");
         }
 
-        private void DeleteOldImage(string? oldImageUrl)
+        private async Task DeleteOldImage(string? oldImageUrl)
         {
-            if (string.IsNullOrWhiteSpace(oldImageUrl)) return;
-
-            // Chuyển URL tương đối thành đường dẫn vật lý
-            string filePathToDelete = Path.Combine(webHostEnvironment.WebRootPath, oldImageUrl.TrimStart('/'));
-
-            if (System.IO.File.Exists(filePathToDelete))
-            {
-                System.IO.File.Delete(filePathToDelete);
-            }
+            await _storageService.DeleteImageAsync(oldImageUrl);
         }
 
         public async Task<ResponseDTO<List<ItemsHistoryDTO>>> GetItemsHistoryAsync(Guid userId)

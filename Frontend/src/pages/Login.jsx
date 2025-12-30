@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { BRAND_NAME, SLOGAN, BRAND_EMOJI } from '../constants/branding';
 import './Login.css';
 
 const Login = () => {
@@ -74,8 +75,8 @@ const Login = () => {
     <div className="login-container">
       <div className="login-card">
         <div className="login-header">
-          <h1>🌱 EcoToken</h1>
-          <p>Biến lối sống xanh thành giá trị thật</p>
+          <h1>{BRAND_EMOJI} {BRAND_NAME}</h1>
+          <p>{SLOGAN}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="login-form">

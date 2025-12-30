@@ -1,7 +1,7 @@
 .home-container {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 20px;
+  padding: var(--spacing-container);
 }
 
 .home-header {
@@ -11,13 +11,13 @@
 }
 
 .home-header h1 {
-  font-size: 2.5em;
+  font-size: var(--font-size-3xl);
   margin: 0 0 10px 0;
 }
 
 .home-header p {
-  font-size: 1.1em;
-  color: #666;
+  font-size: var(--font-size-lg);
+  color: var(--color-text-secondary);
   margin: 0;
 }
 
@@ -447,15 +447,137 @@
   border-left: 4px solid #4a7c2a;
   color: #333;
   font-size: 0.95em;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
-@media (max-width: 768px) {
-  .home-header h1 {
-    font-size: 2em;
+.suggestion-item svg {
+  color: #4a7c2a;
+  flex-shrink: 0;
+}
+
+/* Small phones */
+@media (max-width: 480px) {
+  .home-container {
+    padding: var(--spacing-md);
+  }
+
+  .home-header {
+    margin-bottom: var(--spacing-xl);
   }
 
   .stats-grid {
     grid-template-columns: 1fr;
+    gap: var(--spacing-md);
+  }
+
+  .stat-card {
+    padding: var(--spacing-lg);
+    gap: var(--spacing-md);
+  }
+
+  .stat-icon {
+    font-size: 2.5em;
+  }
+
+  .stat-value {
+    font-size: 2em;
+  }
+
+  .mascot-section {
+    padding: var(--spacing-xl);
+    margin-bottom: var(--spacing-xl);
+  }
+
+  .mascot {
+    font-size: 3.5em;
+  }
+
+  .golden-badge {
+    padding: 6px 12px;
+    font-size: 0.85em;
+  }
+
+  .badge-text {
+    font-size: 0.9em;
+  }
+
+  .mascot-text {
+    font-size: 1em;
+  }
+
+  .golden-achievement {
+    padding: var(--spacing-md);
+    margin-top: var(--spacing-md);
+  }
+
+  .achievement-title {
+    font-size: 1em;
+  }
+
+  .achievement-desc {
+    font-size: 0.85em;
+  }
+
+  .achievement-stats {
+    flex-direction: column;
+    gap: var(--spacing-sm);
+  }
+
+  .achievement-stat {
+    width: 100%;
+    justify-content: center;
+    padding: 8px 16px;
+  }
+
+  .upload-section {
+    padding: var(--spacing-lg);
+    margin-bottom: var(--spacing-xl);
+  }
+
+  .upload-area {
+    padding: var(--spacing-xl);
+  }
+
+  .upload-icon {
+    font-size: 2.5em;
+  }
+
+  .description-input {
+    font-size: 0.95em;
+    padding: 10px;
+  }
+
+  .submit-action-btn {
+    padding: 12px;
+    font-size: 1em;
+  }
+
+  .action-suggestions {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-sm);
+  }
+
+  .suggestion-item {
+    padding: var(--spacing-md);
+    font-size: 0.9em;
+  }
+}
+
+/* Tablets */
+@media (min-width: 481px) and (max-width: 768px) {
+  .home-container {
+    padding: var(--spacing-lg);
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--spacing-lg);
+  }
+
+  .stat-card {
+    padding: var(--spacing-xl);
   }
 
   .mascot {
@@ -472,25 +594,49 @@
   }
 
   .achievement-stats {
-    flex-direction: column;
-    gap: 10px;
-  }
-
-  .achievement-stat {
-    width: 100%;
-    justify-content: center;
+    gap: var(--spacing-md);
   }
 
   .golden-achievement {
-    padding: 15px;
+    padding: var(--spacing-lg);
   }
 
   .achievement-title {
-    font-size: 1.1em;
+    font-size: 1.2em;
   }
 
   .achievement-desc {
-    font-size: 0.9em;
+    font-size: 0.95em;
+  }
+
+  .upload-section {
+    padding: var(--spacing-2xl);
+  }
+
+  .action-suggestions {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Desktop */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .action-suggestions {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Large Desktop */
+@media (min-width: 1025px) {
+  .stats-grid {
+    gap: var(--spacing-2xl);
+  }
+
+  .action-suggestions {
+    grid-template-columns: repeat(3, 1fr);
   }
 }
 

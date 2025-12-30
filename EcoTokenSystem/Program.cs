@@ -19,6 +19,34 @@ namespace EcoTokenSystem
         {
             var builder = WebApplication.CreateBuilder(args);
 
+            // Configure S3 Storage Settings
+            builder.Services.Configure<EcoTokenSystem.Application.Configuration.S3StorageSettings>(options =>
+            {
+                options.Region = builder.Configuration["AWS:Region"] ?? "us-east-1";
+                options.BucketName = builder.Configuration["AWS:S3BucketName"] ?? string.Empty;
+                options.CloudFrontDomain = builder.Configuration["AWS:CloudFrontDomain"] ?? string.Empty;
+                options.UseS3Storage = bool.Parse(builder.Configuration["AWS:UseS3Storage"] ?? "false");
+            });
+
+            // Register AWS S3 Client
+            var awsOptions = new Amazon.Extensions.NETCore.Setup.AWSOptions
+            {
+                Region = Amazon.RegionEndpoint.GetBySystemName(
+                    builder.Configuration["AWS:Region"] ?? "us-east-1")
+            };
+            builder.Services.AddDefaultAWSOptions(awsOptions);
+            builder.Services.AddAWSService<Amazon.S3.IAmazonS3>();
+
+            // Register Storage Service (S3 or Filesystem based on config)
+            var useS3 = bool.Parse(builder.Configuration["AWS:UseS3Storage"] ?? "false");
+            if (useS3)
+            {
+                builder.Services.AddScoped<IStorageService, S3StorageService>();
+            }
+            else
+            {
+                builder.Services.AddScoped<IStorageService, FileSystemStorageService>();
+            }
 
             builder.Services.AddControllers();
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
@@ -69,6 +97,7 @@ namespace EcoTokenSystem
             builder.Services.AddScoped<IConfigInterface, ConfigService>();
             builder.Services.AddScoped<ILikeInterface, LikeService>();
             builder.Services.AddScoped<ICommentInterface, CommentService>();
+            builder.Services.AddScoped<IStoryInterface, StoryService>();
             // Add services to the container.
             var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
 
