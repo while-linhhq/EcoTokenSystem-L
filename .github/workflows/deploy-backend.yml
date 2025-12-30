@@ -25,7 +25,11 @@ env:
   ECS_TASK_DEFINITION: ecotokensystem-backend
   CONTAINER_NAME: ecotokensystem-backend
 
+  # CloudFront Configuration
+  CLOUDFRONT_DOMAIN: d1j604m1z074dh.cloudfront.net
+
   # Backend Health Check
+  BACKEND_URL: https://d1j604m1z074dh.cloudfront.net
   HEALTH_CHECK_PATH: /api/health
 
 jobs:
@@ -121,10 +125,11 @@ jobs:
       - name: Backend health check
         run: |
           echo "Running health check..."
-          BACKEND_URL="${{ secrets.BACKEND_URL }}"
+          HEALTH_URL="${{ env.BACKEND_URL }}${{ env.HEALTH_CHECK_PATH }}"
+          echo "Health check URL: $HEALTH_URL"
 
           for i in {1..10}; do
-            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" ${BACKEND_URL}${HEALTH_CHECK_PATH} || echo "000")
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" $HEALTH_URL || echo "000")
             echo "Attempt $i: Health check returned HTTP $HTTP_CODE"
 
             if [ "$HTTP_CODE" = "200" ]; then
@@ -152,7 +157,7 @@ jobs:
           echo "Backend Image: ${{ steps.build-backend.outputs.image }}"
           echo "ECS Cluster: ${{ env.ECS_CLUSTER }}"
           echo "ECS Service: ${{ env.ECS_SERVICE }}"
-          echo "Backend URL: ${{ secrets.BACKEND_URL }}"
-          echo "Health Check: ${{ secrets.BACKEND_URL }}${{ env.HEALTH_CHECK_PATH }}"
+          echo "Backend URL: ${{ env.BACKEND_URL }}"
+          echo "Health Check: ${{ env.BACKEND_URL }}${{ env.HEALTH_CHECK_PATH }}"
           echo "Git SHA: ${{ github.sha }}"
           echo "Git Ref: ${{ github.ref }}"
