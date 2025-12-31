@@ -13,6 +13,7 @@ namespace EcoTokenSystem.API.Controllers
 
     [ApiController]
     [Route("api/[controller]")]
+    [Route("api/health")]  // Explicit lowercase route for ECS health check
     public class HealthController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
@@ -29,23 +30,17 @@ namespace EcoTokenSystem.API.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> Get()
+        public IActionResult Get()
         {
+            // Simple health check for ECS - always returns 200 OK
+            // This ensures the container passes health checks even if database is temporarily unavailable
             var healthStatus = new
             {
                 status = "healthy",
-                timestamp = DateTime.UtcNow,
-                database = await CheckDatabaseConnection()
+                timestamp = DateTime.UtcNow
             };
 
-            if (healthStatus.database.Status == "connected")
-            {
-                return Ok(healthStatus);
-            }
-            else
-            {
-                return StatusCode(503, healthStatus);
-            }
+            return Ok(healthStatus);
         }
 
         [HttpGet("database")]
