@@ -53,6 +53,9 @@ RUN dotnet publish "EcoTokenSystem.API.csproj" -c Release -o /app/publish /p:Use
 # Tại sao? Vì khi chạy app, ta không cần SDK nữa, chỉ cần runtime
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
 
+# Cài curl cho ECS health check
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+
 # Đặt thư mục làm việc
 WORKDIR /app
 
