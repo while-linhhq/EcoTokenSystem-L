@@ -5,7 +5,7 @@ import { getCurrentUserApi } from '../api/authApi';
 import './Profile.css';
 
 const Profile = () => {
-  const { user, updateUser, logout, changePassword } = useAuth();
+  const { user, updateUser, refreshUser, logout, changePassword } = useAuth();
   const navigate = useNavigate();
   const [nickname, setNickname] = useState(user?.nickname || '');
   const [email, setEmail] = useState(user?.email || '');
@@ -32,10 +32,7 @@ const Profile = () => {
   useEffect(() => {
     const refreshUserData = async () => {
       try {
-        const response = await getCurrentUserApi();
-        if (response.success && response.data) {
-          await updateUser(response.data);
-        }
+        await refreshUser();  // ✅ ĐÚNG: Chỉ GET, không PATCH
       } catch (error) {
         console.error('Error refreshing user data:', error);
         // Không hiển thị lỗi cho user, chỉ log
@@ -45,7 +42,7 @@ const Profile = () => {
     if (user?.id) {
       refreshUserData();
     }
-  }, [user?.id, updateUser]);
+  }, [user?.id, refreshUser]);
 
   useEffect(() => {
     if (user) {

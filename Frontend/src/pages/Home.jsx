@@ -10,7 +10,7 @@ import Calendar from '../components/Calendar';
 import './Home.css';
 
 const Home = () => {
-  const { user, updateUser } = useAuth();
+  const { user, refreshUser } = useAuth();
   const { addPendingAction, getUserActions } = useActions();
   const { config } = useConfig();
   const navigate = useNavigate();
@@ -24,20 +24,17 @@ const Home = () => {
   useEffect(() => {
     const refreshUserData = async () => {
       try {
-        const response = await getCurrentUserApi();
-        if (response.success && response.data) {
-          await updateUser(response.data);
-        }
+        await refreshUser();  // ✅ ĐÚNG: Chỉ GET, không PATCH
       } catch (error) {
         console.error('Error refreshing user data:', error);
         // Không hiển thị lỗi cho user, chỉ log
       }
     };
-    
+
     if (user?.id) {
       refreshUserData();
     }
-  }, [user?.id, updateUser]);
+  }, [user?.id, refreshUser]);
 
   // Workflow: Lấy thông tin các bài viết được duyệt của user -> Lấy ngày giờ -> Tính toán và hiển thị
   useEffect(() => {
