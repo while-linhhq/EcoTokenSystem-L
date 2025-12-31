@@ -12,8 +12,7 @@ namespace EcoTokenSystem.API.Controllers
     }
 
     [ApiController]
-    [Route("api/[controller]")]
-    [Route("api/health")]  // Explicit lowercase route for ECS health check
+    [Route("api/health")]
     public class HealthController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
