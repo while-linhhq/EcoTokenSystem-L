@@ -2,13 +2,14 @@
 // USERS API - GỌI BACKEND THẬT (Admin)
 // ============================================
 import { apiGet, apiPost, apiPatch, apiDelete } from './apiClient';
+import { getAvatarImageUrl } from '../utils/imageUtils';
 
 /**
  * Map UserListDTO từ backend sang format frontend
  */
 const mapUserResponse = (backendUser) => {
   const avatar = backendUser.Avatar || backendUser.avatar || '🌱';
-  const avatarImage = (avatar && avatar.startsWith('data:image')) ? avatar : null;
+  const avatarImage = getAvatarImageUrl(avatar);
   return {
     id: backendUser.Id || backendUser.id,
     userId: backendUser.Id || backendUser.id,

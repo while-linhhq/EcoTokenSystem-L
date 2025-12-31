@@ -68,7 +68,7 @@ const mapPostResponse = (backendPost) => {
       userId: comment.UserId || comment.userId,
       userName: comment.UserName || comment.userName || 'Người dùng',
       userAvatar: comment.UserAvatar || comment.userAvatar || generateAvatarEmoji(comment.UserName || comment.userName),
-      userAvatarImage: comment.UserAvatarImage || comment.userAvatarImage || null,
+      userAvatarImage: normalizeImageUrl(comment.UserAvatarImage || comment.userAvatarImage),
       content: comment.Content || comment.content,
       createdAt: comment.CreatedAt || comment.createdAt
     })),

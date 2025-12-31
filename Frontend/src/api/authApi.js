@@ -2,6 +2,7 @@
 // AUTH API - GỌI BACKEND THẬT
 // ============================================
 import { apiPost, apiGet, apiPatch } from './apiClient';
+import { getAvatarImageUrl } from '../utils/imageUtils';
 
 /**
  * Map response từ backend sang format frontend
@@ -45,7 +46,7 @@ const mapUserResponse = (backendData) => {
     nickname: backendData.Name || backendData.name || username || '',
     email: backendData.Email || backendData.email || '',
     avatar: backendData.Avatar || backendData.avatar || '🌱',
-    avatarImage: (backendData.Avatar || backendData.avatar)?.startsWith('data:image') ? (backendData.Avatar || backendData.avatar) : null,
+    avatarImage: getAvatarImageUrl(backendData.Avatar || backendData.avatar),
     phone: backendData.PhoneNumber || backendData.phoneNumber || backendData.phone || '',
     phoneNumber: backendData.PhoneNumber || backendData.phoneNumber || backendData.phone || '',
     address: backendData.Address || backendData.address || '',
