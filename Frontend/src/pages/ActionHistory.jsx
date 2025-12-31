@@ -6,7 +6,7 @@ import { formatDate } from '../utils/dateUtils';
 import './ActionHistory.css';
 
 const ActionHistory = () => {
-  const { user, updateUser } = useAuth();
+  const { user, refreshUser } = useAuth();
   const { getUserActions } = useActions();
   const [activeTab, setActiveTab] = useState('pending'); // Default to 'pending' to show newly submitted actions
   const [error, setError] = useState(null);
@@ -16,11 +16,7 @@ const ActionHistory = () => {
   useEffect(() => {
     const refreshUserData = async () => {
       try {
-        const response = await getCurrentUserApi();
-        if (response.success && response.data) {
-          // Update user trong AuthContext để đồng bộ streak và tokens
-          await updateUser(response.data);
-        }
+        await refreshUser();  // ✅ ĐÚNG: Chỉ GET, không PATCH
       } catch (err) {
         console.error('Error refreshing user data:', err);
         // Không hiển thị lỗi cho user, chỉ log
@@ -30,7 +26,7 @@ const ActionHistory = () => {
     if (user?.id) {
       refreshUserData();
     }
-  }, [user?.id, updateUser]);
+  }, [user?.id, refreshUser]);
 
   useEffect(() => {
     const loadActions = async () => {

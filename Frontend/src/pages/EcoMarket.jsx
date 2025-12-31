@@ -9,7 +9,7 @@ import { showSuccess, showError, showWarning } from '../utils/toast';
 import './EcoMarket.css';
 
 const EcoMarket = () => {
-  const { user, login, updateUser } = useAuth();
+  const { user, login, refreshUser } = useAuth();
   const { loadGiftHistory } = useGiftHistory();
   const { getGiftPrice } = useConfig();
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -104,14 +104,12 @@ const EcoMarket = () => {
         
         if (response.success) {
           // Refresh toàn bộ user data từ API để đồng bộ tokens và streak với database
-          const userResponse = await getCurrentUserApi();
-          if (userResponse.success && userResponse.data) {
-            await updateUser(userResponse.data);
-          }
-          
+          await refreshUser();  // ✅ ĐÚNG: Chỉ GET, không PATCH
+
           // Reload gift history từ API (backend đã tự động tạo ItemsHistory)
           await loadGiftHistory(user.id);
-          
+
+          const userResponse = await getCurrentUserApi();
           const remainingTokens = userResponse.data?.ecoTokens || userResponse.data?.currentPoints || response.data?.remainingTokens || 0;
           showSuccess(response.message || `Đổi quà thành công! Bạn còn ${remainingTokens} Eco Tokens.`);
         } else {

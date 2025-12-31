@@ -229,6 +229,52 @@ export const AuthProvider = ({ children }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, user?.userId, user?.token]);
 
+  // Hàm refresh user data từ backend (GET only, không PATCH)
+  const refreshUser = useCallback(async () => {
+    try {
+      const currentToken = user?.token || (() => {
+        try {
+          const storedUser = localStorage.getItem('user');
+          if (storedUser) {
+            const parsed = JSON.parse(storedUser);
+            return parsed.token || null;
+          }
+        } catch {
+          return null;
+        }
+        return null;
+      })();
+
+      const currentUserId = user?.id || user?.userId;
+
+      if (!currentUserId) {
+        return { success: false, message: 'Chưa đăng nhập' };
+      }
+
+      // Gọi GET /api/User/me (KHÔNG phải PATCH)
+      const response = await getCurrentUserApi();
+
+      if (response.success && response.data) {
+        // Giữ token và id từ user hiện tại
+        const updatedUserData = {
+          ...response.data,
+          token: currentToken || user?.token,
+          id: currentUserId || response.data.id || response.data.userId,
+          userId: currentUserId || response.data.userId || response.data.id
+        };
+
+        setUser(updatedUserData);
+        localStorage.setItem('user', JSON.stringify(updatedUserData));
+        return { success: true, message: 'Refresh thành công' };
+      }
+
+      return { success: false, message: 'Không thể refresh user data' };
+    } catch (error) {
+      console.error('Error refreshing user:', error);
+      return { success: false, message: error.message };
+    }
+  }, [user?.id, user?.userId, user?.token]);
+
   const changePassword = async (oldPassword, newPassword) => {
     try {
       if (!user?.id) {
@@ -411,7 +457,8 @@ export const AuthProvider = ({ children }) => {
     logout,
     isModerator,
     isAdmin,
-    updateUser,
+    updateUser,      // Giữ nguyên cho profile save (PATCH với FormData)
+    refreshUser,     // THÊM MỚI cho auto-refresh (GET only)
     changePassword
   };
 
