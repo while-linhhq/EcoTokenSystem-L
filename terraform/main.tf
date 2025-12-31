@@ -204,7 +204,7 @@ resource "aws_ecs_cluster" "main" {
 
   setting {
     name  = "containerInsights"
-    value = "enabled"
+    value = "disabled"
   }
 
   tags = {
@@ -215,7 +215,7 @@ resource "aws_ecs_cluster" "main" {
 # CloudWatch Log Group for ECS
 resource "aws_cloudwatch_log_group" "ecs" {
   name              = "/ecs/ecotokensystem-backend"
-  retention_in_days = 7
+  retention_in_days = 3
 
   tags = {
     Name = "ecotokensystem-ecs-logs"
@@ -471,7 +471,7 @@ resource "aws_ecs_service" "backend" {
   name            = "ecotokensystem-backend-service"
   cluster         = aws_ecs_cluster.main.id
   task_definition = aws_ecs_task_definition.backend.arn
-  desired_count   = 2  # Run 2 tasks for high availability
+  desired_count   = 1  # Single task for cost optimization
   launch_type     = "FARGATE"
 
   network_configuration {
@@ -486,8 +486,8 @@ resource "aws_ecs_service" "backend" {
     container_port   = 8080
   }
 
-  deployment_minimum_healthy_percent = 100  # Keep old task running until new one is healthy
-  deployment_maximum_percent         = 200  # Allow 2 tasks during deployment
+  deployment_minimum_healthy_percent = 0    # Allow downtime during deployment for cost savings
+  deployment_maximum_percent         = 100  # Only 1 task maximum
 
   health_check_grace_period_seconds = 240   # 4 minutes for database migrations and startup
 
@@ -735,7 +735,7 @@ resource "aws_s3_bucket_versioning" "uploads" {
   bucket = aws_s3_bucket.uploads.id
 
   versioning_configuration {
-    status = "Enabled"
+    status = "Suspended"  # Suspended for cost optimization
   }
 }
 
