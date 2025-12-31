@@ -354,8 +354,6 @@ namespace EcoTokenSystem
             app.UseAuthentication();
             app.UseAuthorization();
 
-            // Health check endpoint for ECS
-            app.MapGet("/api/health", () => Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow }));
 
             app.MapControllers();
 
