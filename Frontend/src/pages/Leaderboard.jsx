@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { getLeaderboardApi } from '../api/usersApi';
+import { Search } from 'lucide-react';
 import './Leaderboard.css';
 
 const Leaderboard = () => {
@@ -8,6 +9,7 @@ const Leaderboard = () => {
   const [activeTab, setActiveTab] = useState('tokens'); // 'tokens' or 'streak'
   const [leaderboard, setLeaderboard] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     const loadLeaderboard = async () => {
@@ -44,6 +46,17 @@ const Leaderboard = () => {
     return '';
   };
 
+  // Filter leaderboard based on search term
+  const filteredLeaderboard = useMemo(() => {
+    if (!searchTerm.trim()) return leaderboard;
+    
+    const term = searchTerm.toLowerCase();
+    return leaderboard.filter(entry => {
+      const name = (entry.name || entry.userName || '').toLowerCase();
+      const username = (entry.username || '').toLowerCase();
+      return name.includes(term) || username.includes(term);
+    });
+  }, [leaderboard, searchTerm]);
 
   return (
     <div className="leaderboard-container">
@@ -51,6 +64,33 @@ const Leaderboard = () => {
         <h1>🏆 Bảng xếp hạng</h1>
         <p>Thống kê và xếp hạng tất cả người dùng</p>
       </div>
+
+      {/* Search Bar */}
+      <div className="search-bar">
+        <Search size={20} className="search-icon" />
+        <input
+          type="text"
+          placeholder="Tìm kiếm theo tên người dùng..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="search-input"
+        />
+        {searchTerm && (
+          <button
+            className="clear-search"
+            onClick={() => setSearchTerm('')}
+            title="Xóa tìm kiếm"
+          >
+            ✕
+          </button>
+        )}
+      </div>
+
+      {searchTerm && (
+        <div className="search-results-info">
+          Tìm thấy <strong>{filteredLeaderboard.length}</strong> người dùng cho "{searchTerm}"
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="leaderboard-tabs">
@@ -72,13 +112,13 @@ const Leaderboard = () => {
         <div className="loading-state">
           <p>Đang tải bảng xếp hạng...</p>
         </div>
-      ) : leaderboard.length === 0 ? (
+      ) : filteredLeaderboard.length === 0 ? (
         <div className="empty-state">
-          <p>Chưa có dữ liệu xếp hạng</p>
+          <p>{searchTerm ? 'Không tìm thấy người dùng nào' : 'Chưa có dữ liệu xếp hạng'}</p>
         </div>
       ) : (
         <div className="leaderboard-list">
-          {leaderboard.map((entry, index) => {
+          {filteredLeaderboard.map((entry, index) => {
             // So sánh userId (có thể là string hoặc Guid)
             const entryUserId = entry.userId?.toString() || entry.userId;
             const currentUserId = user?.id?.toString() || user?.userId?.toString() || user?.id || user?.userId;

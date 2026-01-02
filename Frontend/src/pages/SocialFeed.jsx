@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { getApprovedPostsApi } from '../api/postsApi';
 import { toggleLikeApi } from '../api/likesApi';
@@ -6,7 +6,7 @@ import { createCommentApi, deleteCommentApi } from '../api/commentsApi';
 import { getStoriesApi } from '../api/storiesApi';
 import { formatTimeAgo } from '../utils/dateUtils';
 import { showSuccess, showError } from '../utils/toast';
-import { Plus } from 'lucide-react';
+import { Plus, Search } from 'lucide-react';
 import StoryCircle from '../components/Stories/StoryCircle';
 import StoryUpload from '../components/Stories/StoryUpload';
 import StoryViewer from '../components/Stories/StoryViewer';
@@ -14,10 +14,12 @@ import './SocialFeed.css';
 
 const SocialFeed = () => {
   const { user, isAuthenticated } = useAuth();
+  const [activeTab, setActiveTab] = useState('posts'); // 'posts' or 'stories'
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [commentInputs, setCommentInputs] = useState({}); // postId -> comment text
   const [expandedComments, setExpandedComments] = useState(new Set()); // postIds with expanded comments
+  const [searchTerm, setSearchTerm] = useState('');
 
   // Stories state
   const [stories, setStories] = useState([]);
@@ -26,10 +28,11 @@ const SocialFeed = () => {
   const [showStoryViewer, setShowStoryViewer] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState(null);
 
-  // Load approved posts from backend
+  // Load approved posts and stories from backend
   useEffect(() => {
     loadPosts();
     loadStories();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Load stories from backend
@@ -38,11 +41,13 @@ const SocialFeed = () => {
       setStoriesLoading(true);
       const response = await getStoriesApi();
 
-      if (response.success && response.data) {
+      if (response.success && response.data && Array.isArray(response.data)) {
         // Group stories by user
         const groupedStories = {};
         response.data.forEach(story => {
-          const userId = story.userId;
+          const userId = story.userId || story.UserId;
+          if (!userId) return; // Skip if no userId
+          
           if (!groupedStories[userId]) {
             groupedStories[userId] = [];
           }
@@ -54,22 +59,28 @@ const SocialFeed = () => {
 
         // Sort: current user first, then by most recent story
         storiesArray.sort((a, b) => {
-          const aHasCurrentUser = a[0].userId === user?.id;
-          const bHasCurrentUser = b[0].userId === user?.id;
+          if (!a[0] || !b[0]) return 0;
+          
+          const aHasCurrentUser = (a[0].userId || a[0].UserId) === user?.id;
+          const bHasCurrentUser = (b[0].userId || b[0].UserId) === user?.id;
 
           if (aHasCurrentUser && !bHasCurrentUser) return -1;
           if (!aHasCurrentUser && bHasCurrentUser) return 1;
 
           // Sort by most recent story
-          const aLatest = new Date(a[0].createdAt);
-          const bLatest = new Date(b[0].createdAt);
+          const aLatest = new Date(a[0].createdAt || a[0].CreatedAt || 0);
+          const bLatest = new Date(b[0].createdAt || b[0].CreatedAt || 0);
           return bLatest - aLatest;
         });
 
         setStories(storiesArray);
+      } else {
+        // Set empty array if no data or invalid response
+        setStories([]);
       }
     } catch (error) {
       console.error('Error loading stories:', error);
+      setStories([]);
     } finally {
       setStoriesLoading(false);
     }
@@ -175,85 +186,10 @@ const SocialFeed = () => {
   const loadPosts = async () => {
     try {
       setLoading(true);
-      console.log('[SocialFeed] ===== Loading approved posts =====');
-
-      // Test API trực tiếp để kiểm tra
-      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5109/api';
-      console.log('[SocialFeed] Testing API directly:', `${API_BASE_URL}/Post?statusId=2`);
-
-      try {
-        const testResponse = await fetch(`${API_BASE_URL}/Post?statusId=2`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json'
-          }
-        });
-
-        console.log('[SocialFeed] Direct API test response:', {
-          status: testResponse.status,
-          statusText: testResponse.statusText,
-          ok: testResponse.ok,
-          contentType: testResponse.headers.get('content-type')
-        });
-
-        if (testResponse.ok) {
-          const testData = await testResponse.json();
-          console.log('[SocialFeed] Direct API test data:', {
-            IsSuccess: testData.IsSuccess,
-            Message: testData.Message,
-            DataType: typeof testData.Data,
-            IsDataArray: Array.isArray(testData.Data),
-            DataLength: Array.isArray(testData.Data) ? testData.Data.length : 'N/A',
-            SampleData: testData.Data && Array.isArray(testData.Data) && testData.Data.length > 0
-              ? {
-                  Id: testData.Data[0].Id,
-                  Title: testData.Data[0].Title,
-                  StatusId: testData.Data[0].StatusId,
-                  UserName: testData.Data[0].UserName,
-                  ImageUrl: testData.Data[0].ImageUrl
-                }
-              : 'No data'
-          });
-        } else {
-          console.error('[SocialFeed] Direct API test failed:', testResponse.status, testResponse.statusText);
-        }
-      } catch (testError) {
-        console.error('[SocialFeed] Direct API test error:', testError);
-      }
-
-      // Gọi API qua wrapper
       const postsResponse = await getApprovedPostsApi();
 
-      console.log('[SocialFeed] Wrapper API Response:', {
-        success: postsResponse.success,
-        message: postsResponse.message,
-        dataLength: postsResponse.data?.length || 0,
-        dataType: Array.isArray(postsResponse.data) ? 'array' : typeof postsResponse.data
-      });
-
-      if (postsResponse.success && postsResponse.data) {
-        const postsArray = Array.isArray(postsResponse.data) ? postsResponse.data : [];
-
-        if (postsArray.length === 0) {
-          console.warn('[SocialFeed] ===== No posts found =====');
-          console.warn('[SocialFeed] This could mean:');
-          console.warn('[SocialFeed] 1. No posts with StatusId = 2 in database');
-          console.warn('[SocialFeed] 2. API returned empty array');
-          console.warn('[SocialFeed] 3. Data mapping issue');
-          setPosts([]);
-          return;
-        }
-
-        // Log sample post để debug
-        console.log('[SocialFeed] Sample post:', {
-          id: postsArray[0].id,
-          title: postsArray[0].title,
-          userName: postsArray[0].userName,
-          imageUrl: postsArray[0].imageUrl,
-          status: postsArray[0].status,
-          statusId: postsArray[0].statusId,
-          approvedRejectedAt: postsArray[0].approvedRejectedAt
-        });
+      if (postsResponse.success && postsResponse.data && Array.isArray(postsResponse.data)) {
+        const postsArray = postsResponse.data;
 
         // Sắp xếp posts theo thời gian approve (mới nhất trước)
         const sortedPosts = [...postsArray].sort((a, b) => {
@@ -262,22 +198,43 @@ const SocialFeed = () => {
           return dateB - dateA; // Mới nhất trước
         });
 
-        console.log('[SocialFeed] ===== Success =====');
-        console.log('[SocialFeed] Loaded and sorted posts:', sortedPosts.length);
         setPosts(sortedPosts);
       } else {
-        console.error('[SocialFeed] ===== Failed =====');
-        console.error('[SocialFeed] Failed to load posts:', postsResponse.message);
         setPosts([]);
       }
     } catch (error) {
-      console.error('[SocialFeed] ===== Error =====');
-      console.error('[SocialFeed] Error loading posts:', error);
+      console.error('Error loading posts:', error);
       setPosts([]);
     } finally {
       setLoading(false);
     }
   };
+
+  // Filter posts based on search term
+  const filteredPosts = useMemo(() => {
+    if (!searchTerm.trim()) return posts;
+    
+    const term = searchTerm.toLowerCase();
+    return posts.filter(post => {
+      const userName = (post.userName || '').toLowerCase();
+      const title = (post.title || '').toLowerCase();
+      const content = (post.content || post.description || '').toLowerCase();
+      
+      return userName.includes(term) || title.includes(term) || content.includes(term);
+    });
+  }, [posts, searchTerm]);
+
+  // Filter stories based on search term
+  const filteredStories = useMemo(() => {
+    if (!searchTerm.trim()) return stories;
+    
+    const term = searchTerm.toLowerCase();
+    return stories.filter(userStories => {
+      if (!userStories || userStories.length === 0) return false;
+      const userName = (userStories[0].userName || userStories[0].UserName || '').toLowerCase();
+      return userName.includes(term);
+    });
+  }, [stories, searchTerm]);
 
   return (
     <div className="social-container">
@@ -286,53 +243,64 @@ const SocialFeed = () => {
         <p>Cùng nhau trao đổi và truyền cảm hứng sống xanh</p>
       </div>
 
-
-      {/* Stories Section - shown above feed */}
-      <div className="stories-container">
-        <div className="stories-header">
-          <h3>Stories</h3>
-          {isAuthenticated && (
-            <button
-              className="stories-add-btn"
-              onClick={() => setShowStoryUpload(true)}
-            >
-              <Plus size={16} />
-              Tạo Story
-            </button>
-          )}
-        </div>
-        <div className="stories-list">
-          {storiesLoading ? (
-            <div className="stories-empty">Đang tải Stories...</div>
-          ) : stories.length > 0 ? (
-            stories.map((userStories, index) => (
-              <StoryCircle
-                key={index}
-                userStories={userStories}
-                currentUserId={user?.id}
-                onClick={handleStoryClick}
-              />
-            ))
-          ) : (
-            <div className="stories-empty">Chưa có Story nào</div>
-          )}
-        </div>
+      {/* Search Bar */}
+      <div className="search-bar">
+        <Search size={20} className="search-icon" />
+        <input
+          type="text"
+          placeholder={activeTab === 'posts' ? "Tìm kiếm bài viết theo tên, nội dung..." : "Tìm kiếm story theo tên người dùng..."}
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="search-input"
+        />
+        {searchTerm && (
+          <button
+            className="clear-search"
+            onClick={() => setSearchTerm('')}
+            title="Xóa tìm kiếm"
+          >
+            ✕
+          </button>
+        )}
       </div>
 
-      {/* Feed Section */}
-      <div className="feed-section">
+      {searchTerm && (
+        <div className="search-results-info">
+          Tìm thấy <strong>{activeTab === 'posts' ? filteredPosts.length : filteredStories.length}</strong> {activeTab === 'posts' ? 'bài viết' : 'story'} cho "{searchTerm}"
+        </div>
+      )}
+
+      {/* Tabs */}
+      <div className="social-tabs">
+        <button
+          className={activeTab === 'posts' ? 'active' : ''}
+          onClick={() => setActiveTab('posts')}
+        >
+          📰 Bài viết
+        </button>
+        <button
+          className={activeTab === 'stories' ? 'active' : ''}
+          onClick={() => setActiveTab('stories')}
+        >
+          📸 Story
+        </button>
+      </div>
+
+      {/* Posts Tab Content */}
+      {activeTab === 'posts' && (
+        <div className="feed-section">
           {loading ? (
             <div className="loading-state">
               <p>Đang tải bài đăng...</p>
             </div>
-          ) : posts.length === 0 ? (
+          ) : filteredPosts.length === 0 ? (
             <div className="empty-state">
               <div className="empty-icon">📰</div>
-              <p>Chưa có bài đăng nào được duyệt</p>
-              <p className="empty-hint">Hãy là người đầu tiên chia sẻ hành động sống xanh của bạn!</p>
+              <p>{searchTerm ? 'Không tìm thấy bài viết nào' : 'Chưa có bài đăng nào được duyệt'}</p>
+              <p className="empty-hint">{searchTerm ? 'Thử tìm kiếm với từ khóa khác' : 'Hãy là người đầu tiên chia sẻ hành động sống xanh của bạn!'}</p>
             </div>
           ) : (
-            posts.map(post => {
+            filteredPosts.map(post => {
               // Sử dụng thông tin user từ post response (PostsDTO đã có UserName, UserAvatar, UserAvatarImage)
               const userName = post.userName || 'Người dùng';
               const userAvatar = post.userAvatar || '🌱';
@@ -515,6 +483,43 @@ const SocialFeed = () => {
             })
           )}
         </div>
+      )}
+
+      {/* Stories Tab Content */}
+      {activeTab === 'stories' && (
+        <div className="stories-section">
+          <div className="stories-container">
+            <div className="stories-header">
+              <h3>Stories</h3>
+              {isAuthenticated && (
+                <button
+                  className="stories-add-btn"
+                  onClick={() => setShowStoryUpload(true)}
+                >
+                  <Plus size={16} />
+                  Tạo Story
+                </button>
+              )}
+            </div>
+            <div className="stories-list">
+              {storiesLoading ? (
+                <div className="stories-empty">Đang tải Stories...</div>
+              ) : filteredStories.length > 0 ? (
+                filteredStories.map((userStories, index) => (
+                  <StoryCircle
+                    key={index}
+                    userStories={userStories}
+                    currentUserId={user?.id}
+                    onClick={handleStoryClick}
+                  />
+                ))
+              ) : (
+                <div className="stories-empty">Chưa có Story nào</div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Story Upload Modal */}
       <StoryUpload

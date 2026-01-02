@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from './AuthContext';
 import { getAllUsersApi, createModeratorApi, updateUserApi as updateUserApiCall, deleteUserApi, searchUsersApi } from '../api/usersApi';
 
@@ -16,16 +16,25 @@ export const UsersProvider = ({ children }) => {
   const [allUsers, setAllUsers] = useState([]);
   const [loading, setLoading] = useState(false);
   const { isAuthenticated, user, isAdmin } = useAuth();
+  const loadingRef = useRef(false); // Dùng ref để track loading state mà không gây re-render
 
   // Load all users from API (chỉ admin mới có quyền)
-  const loadAllUsers = async () => {
+  // Sử dụng useCallback để tránh tạo function mới mỗi lần render, gây spam API calls
+  const loadAllUsers = useCallback(async () => {
     // Chỉ load nếu user đã đăng nhập và là admin
     if (!isAuthenticated || !user || !isAdmin()) {
       console.log('[UsersContext] User not authenticated or not admin, skipping loadAllUsers');
       return;
     }
 
+    // Guard để tránh gọi API nếu đang loading (dùng ref để tránh re-render)
+    if (loadingRef.current) {
+      console.log('[UsersContext] Already loading users, skipping duplicate call');
+      return;
+    }
+
     try {
+      loadingRef.current = true;
       setLoading(true);
       const response = await getAllUsersApi();
       if (response.success) {
@@ -34,18 +43,18 @@ export const UsersProvider = ({ children }) => {
     } catch (error) {
       console.error('Error loading users:', error);
     } finally {
+      loadingRef.current = false;
       setLoading(false);
     }
-  };
+  }, [isAuthenticated, user?.id, isAdmin]); // Chỉ depend vào user?.id và bỏ loading khỏi deps
 
   useEffect(() => {
-    // Chỉ load khi user đã đăng nhập và là admin
-    if (isAuthenticated && user && isAdmin()) {
-      loadAllUsers();
-    } else {
+    // Chỉ clear users khi user đã đăng xuất
+    // Bỏ auto-load để tránh spam, Admin component sẽ tự gọi khi cần
+    if (!isAuthenticated || !user || !isAdmin()) {
       setAllUsers([]);
     }
-  }, [isAuthenticated, user]);
+  }, [isAuthenticated, user?.id, isAdmin]);
 
   const saveUser = (userData) => {
     // This is a sync function for backward compatibility

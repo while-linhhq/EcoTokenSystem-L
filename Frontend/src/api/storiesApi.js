@@ -10,13 +10,22 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5109
 
 /**
  * Get all active stories (within 24 hours)
- * @returns {Promise} Array of story objects grouped by user
+ * @returns {Promise} Array of story objects
  */
 export const getStoriesApi = async () => {
   try {
     // Public endpoint - no authentication required
     const result = await apiGet('/Stories', false);
-    return { success: true, data: result.data || [] };
+    
+    // Handle different response formats
+    let stories = [];
+    if (Array.isArray(result.data)) {
+      stories = result.data;
+    } else if (result.data?.Data && Array.isArray(result.data.Data)) {
+      stories = result.data.Data;
+    }
+    
+    return { success: true, data: stories };
   } catch (error) {
     console.error('Error fetching stories:', error);
     return { success: false, message: error.message, data: [] };

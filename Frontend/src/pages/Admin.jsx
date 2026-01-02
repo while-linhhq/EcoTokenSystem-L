@@ -733,8 +733,8 @@ const Admin = () => {
                   }}
                 >
                   {category === 'all' ? 'Tất cả' :
-                   category === 'handmade' ? 'Handmade' :
-                   category === 'vouchers' ? 'Voucher' :
+                   category === 'handmade' ? 'Thủ công' :
+                   category === 'vouchers' ? 'Phiếu khuyến mãi' :
                    category === 'books' ? 'Sách' :
                    category === 'movies' ? 'Phim' :
                    'Quyên góp'}
@@ -767,8 +767,8 @@ const Admin = () => {
                   <div className="stat-info">
                     <div className="stat-value">{count}</div>
                     <div className="stat-label">
-                      {category === 'handmade' ? 'Handmade' :
-                       category === 'vouchers' ? 'Voucher' :
+                      {category === 'handmade' ? 'Thủ công' :
+                       category === 'vouchers' ? 'Phiếu khuyến mãi' :
                        category === 'books' ? 'Sách' :
                        category === 'movies' ? 'Phim' :
                        'Quyên góp'}
@@ -788,8 +788,8 @@ const Admin = () => {
 
               const getTagInfo = (tag) => {
                 const tagMap = {
-                  handmade: { emoji: '🎨', name: 'Handmade', color: '#e91e63' },
-                  vouchers: { emoji: '🎫', name: 'Voucher', color: '#2196f3' },
+                  handmade: { emoji: '🎨', name: 'Thủ công', color: '#e91e63' },
+                  vouchers: { emoji: '🎫', name: 'Phiếu khuyến mãi', color: '#2196f3' },
                   books: { emoji: '📚', name: 'Sách', color: '#9c27b0' },
                   movies: { emoji: '🎬', name: 'Phim', color: '#f44336' },
                   donations: { emoji: '❤️', name: 'Quyên góp', color: '#ff5722' }
@@ -1463,8 +1463,8 @@ const Admin = () => {
                   onChange={(e) => setItemForm({ ...itemForm, tag: e.target.value })}
                   required
                 >
-                  <option value="handmade">Handmade</option>
-                  <option value="vouchers">Voucher</option>
+                  <option value="handmade">Thủ công</option>
+                  <option value="vouchers">Phiếu khuyến mãi</option>
                   <option value="books">Sách</option>
                   <option value="movies">Phim</option>
                   <option value="donations">Quyên góp</option>

@@ -1,15 +1,32 @@
+import { useState, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useGiftHistory } from '../context/GiftHistoryContext';
 import { formatDate } from '../utils/dateUtils';
+import { Search } from 'lucide-react';
 import './GiftHistory.css';
 
 const GiftHistory = () => {
   const { user } = useAuth();
   const { giftHistory, loading } = useGiftHistory();
+  const [searchTerm, setSearchTerm] = useState('');
   
   // API đã trả về dữ liệu đã được lọc theo user hiện tại (từ JWT token)
   // Không cần filter lại, sử dụng trực tiếp giftHistory từ context
   const history = giftHistory || [];
+  
+  // Filter history based on search term
+  const filteredHistory = useMemo(() => {
+    if (!searchTerm.trim()) return history;
+    
+    const term = searchTerm.toLowerCase();
+    return history.filter(item => {
+      const name = (item.giftName || '').toLowerCase();
+      const description = (item.giftDescription || '').toLowerCase();
+      return name.includes(term) || description.includes(term);
+    });
+  }, [history, searchTerm]);
+  
+  // Total spent should be calculated from all history, not filtered
   const totalSpent = history.reduce((sum, item) => sum + (item.price || 0), 0);
   
   // Tính số token còn lại sau mỗi lần đổi quà
@@ -21,7 +38,7 @@ const GiftHistory = () => {
   // Item đầu tiên (mới nhất): tokensAfter = currentPoints (sau khi đổi quà này, số token là currentPoints)
   // Item tiếp theo: tokensAfter = currentPoints + price của item trước (vì đã đổi item trước nên token giảm)
   // tokensAfter = currentPoints + tổng điểm đã đổi từ item này trở về sau (các item mới hơn hoặc bằng)
-  const historyWithTokens = history.map((item, index) => {
+  const historyWithTokens = filteredHistory.map((item, index) => {
     // Tính tổng điểm đã đổi từ item này trở về sau (các item mới hơn hoặc bằng, tức là từ đầu mảng đến item này)
     // Vì history được sắp xếp từ mới đến cũ, index 0 là mới nhất
     const pointsSpentFromThis = history.slice(0, index + 1).reduce((sum, spentItem) => sum + (spentItem.price || 0), 0);
@@ -45,10 +62,37 @@ const GiftHistory = () => {
         <p>Xem lại các quà tặng bạn đã đổi</p>
       </div>
 
+      {/* Search Bar */}
+      <div className="search-bar">
+        <Search size={20} className="search-icon" />
+        <input
+          type="text"
+          placeholder="Tìm kiếm theo tên quà..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="search-input"
+        />
+        {searchTerm && (
+          <button
+            className="clear-search"
+            onClick={() => setSearchTerm('')}
+            title="Xóa tìm kiếm"
+          >
+            ✕
+          </button>
+        )}
+      </div>
+
+      {searchTerm && (
+        <div className="search-results-info">
+          Tìm thấy <strong>{filteredHistory.length}</strong> quà cho "{searchTerm}"
+        </div>
+      )}
+
       <div className="history-stats">
         <div className="stat-card">
           <div className="stat-label">Tổng số quà đã đổi</div>
-          <div className="stat-value">{history.length}</div>
+          <div className="stat-value">{filteredHistory.length}</div>
         </div>
         <div className="stat-card">
           <div className="stat-label">Tổng Eco Tokens đã dùng</div>
@@ -61,11 +105,11 @@ const GiftHistory = () => {
           <div className="empty-icon">⏳</div>
           <p>Đang tải lịch sử đổi quà...</p>
         </div>
-      ) : history.length === 0 ? (
+      ) : filteredHistory.length === 0 ? (
         <div className="empty-state">
           <div className="empty-icon">📦</div>
-          <p>Bạn chưa đổi quà nào</p>
-          <p className="empty-hint">Hãy đến Eco Market để đổi quà tặng thân thiện môi trường!</p>
+          <p>{searchTerm ? 'Không tìm thấy quà nào' : 'Bạn chưa đổi quà nào'}</p>
+          <p className="empty-hint">{searchTerm ? 'Thử tìm kiếm với từ khóa khác' : 'Hãy đến Cửa hàng để đổi quà tặng thân thiện môi trường!'}</p>
         </div>
       ) : (
         <div className="history-list">
