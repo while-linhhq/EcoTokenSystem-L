@@ -231,17 +231,29 @@ const ActionHistory = () => {
               <div className="action-content">
                 <div className="action-header-row">
                   <div className="action-info">
-                    <h3>{action.description || 'Hành động sống xanh'}</h3>
+                    <h3>{action.title || action.description || 'Hành động sống xanh'}</h3>
                     <div className="action-meta">
                       <span className="meta-item">📅 {formatDate(action.submittedAt)}</span>
                       {action.reviewedAt && (
                         <span className="meta-item">👮 Duyệt: {formatDate(action.reviewedAt)}</span>
+                      )}
+                      {action.status === 'approved' && action.adminId && (
+                        <span className="meta-item">✅ Đã duyệt bởi moderator</span>
                       )}
                     </div>
                   </div>
                   {getStatusBadge(action.status)}
                 </div>
 
+                {/* Hiển thị nội dung cho bài chờ duyệt */}
+                {action.status === 'pending' && (action.content || action.title) && (
+                  <div className="action-content-section">
+                    <div className="content-label">📝 Nội dung bài viết:</div>
+                    <div className="content-text">{action.content || action.title || action.description}</div>
+                  </div>
+                )}
+
+                {/* Hiển thị phần thưởng cho bài đã duyệt */}
                 {action.status === 'approved' && action.rewards && (
                   <div className="rewards-section">
                     <div className="rewards-title">🎁 Phần thưởng nhận được:</div>
@@ -252,7 +264,26 @@ const ActionHistory = () => {
                   </div>
                 )}
 
-                {action.comment && (
+                {/* Hiển thị nội dung và lí do từ chối cho bài bị từ chối */}
+                {action.status === 'rejected' && (
+                  <>
+                    {(action.content || action.title) && (
+                      <div className="action-content-section">
+                        <div className="content-label">📝 Nội dung bài viết:</div>
+                        <div className="content-text">{action.content || action.title || action.description}</div>
+                      </div>
+                    )}
+                    {action.rejectionReason && (
+                      <div className="rejection-reason-section">
+                        <div className="rejection-reason-label">❌ Lí do từ chối:</div>
+                        <div className="rejection-reason-text">{action.rejectionReason}</div>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {/* Nhận xét từ moderator (nếu có) */}
+                {action.comment && action.status !== 'rejected' && (
                   <div className={`moderator-comment ${action.status === 'approved' ? 'approved' : 'rejected'}`}>
                     <strong>Nhận xét từ moderator:</strong>
                     <p>{action.comment}</p>

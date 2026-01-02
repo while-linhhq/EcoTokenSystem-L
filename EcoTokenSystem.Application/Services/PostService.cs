@@ -232,8 +232,8 @@ namespace EcoTokenSystem.Application.Services
 
             if (approvedDates == null || !approvedDates.Any())
             {
-                // Trường hợp không có bài nào được duyệt (không nên xảy ra vì đang trong quá trình approve)
-                userDomain.Streak = 1;
+                // Trường hợp không có bài nào được duyệt, streak = 0
+                userDomain.Streak = 0;
                 _context.Users.Update(userDomain);
                 return;
             }
@@ -241,12 +241,12 @@ namespace EcoTokenSystem.Application.Services
             var mostRecentDate = approvedDates[0];
             int daysSinceMostRecent = (today - mostRecentDate).Days;
 
-            // Nếu ngày gần nhất cách quá xa (hơn 1 ngày), streak = 1 (chỉ tính ngày đó, nhưng không liên tiếp với hôm nay)
             // Chỉ tính streak nếu ngày gần nhất là hôm nay hoặc hôm qua
+            // Nếu ngày gần nhất cách quá xa (hơn 1 ngày), streak = 0 (không còn streak liên tiếp)
             if (daysSinceMostRecent > 1)
             {
                 // Bài được duyệt cách quá xa, không còn streak liên tiếp
-                userDomain.Streak = 1;
+                userDomain.Streak = 0;
                 _context.Users.Update(userDomain);
                 return;
             }

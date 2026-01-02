@@ -5,9 +5,8 @@ namespace EcoTokenSystem.Application.DTOs
 {
     public class UpdateProfileRequestDTO
     {
-        [Required]
-        public string Name { get; set; } = string.Empty;
-        public string Email { get; set; } = string.Empty;
+        public string? Name { get; set; }
+        public string? Email { get; set; }
 
         // Avatar image file upload (multipart/form-data)
         public IFormFile? Avatar { get; set; }
@@ -15,14 +14,10 @@ namespace EcoTokenSystem.Application.DTOs
         // Avatar emoji selection (for emoji avatars)
         public string? AvatarEmoji { get; set; }
 
-        [Required]
         public DateOnly? DateOfBirth { get; set; }
-        [Required]
-        public string Gender { get; set; } = string.Empty;
-        [Required]
+        public string? Gender { get; set; }
         [MaxLength(11)]
-        public string PhoneNumber { get; set; } = string.Empty;
-        [Required]
-        public string Address { get; set; } = string.Empty;
+        public string? PhoneNumber { get; set; }
+        public string? Address { get; set; }
     }
 }

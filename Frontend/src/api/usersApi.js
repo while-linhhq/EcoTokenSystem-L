@@ -98,11 +98,18 @@ export const createModeratorApi = async (moderatorData) => {
     console.log('[createModeratorApi] Request:', { username, roleId, hasPassword: !!moderatorData.password });
 
     try {
-      const response = await apiPost(`/User/admin/create?roleId=${roleId}`, {
+      const requestData = {
         username: username,
         password: moderatorData.password,
         passwordConfirm: moderatorData.password
-      }, true); // Cần auth (Admin)
+      };
+      
+      // Add name/nickname if provided
+      if (moderatorData.nickname) {
+        requestData.name = moderatorData.nickname;
+      }
+
+      const response = await apiPost(`/User/admin/create?roleId=${roleId}`, requestData, true); // Cần auth (Admin)
 
       console.log('[createModeratorApi] Response:', response);
 

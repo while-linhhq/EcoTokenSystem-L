@@ -145,12 +145,12 @@ const Profile = () => {
       // Nickname và name là một - dùng nickname làm name cho backend
       const nameToSave = nickname.trim() || user.nickname || user.name || user.fullName || '';
 
-      // Add all profile fields
-      formData.append('name', nameToSave);
+      // Add all profile fields (only send if user has filled them, allow partial updates)
+      if (nameToSave) formData.append('name', nameToSave);
       if (email?.trim()) formData.append('email', email.trim());
       if (phone?.trim()) formData.append('phoneNumber', phone.trim());
       if (dateOfBirth) formData.append('dateOfBirth', dateOfBirth);
-      if (gender) formData.append('gender', gender);
+      if (gender?.trim()) formData.append('gender', gender.trim());
       if (address?.trim()) formData.append('address', address.trim());
 
       // Add avatar
