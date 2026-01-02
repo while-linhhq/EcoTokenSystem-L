@@ -335,8 +335,17 @@ namespace EcoTokenSystem.Application.Services
                 RejectionReason = post.RejectionReason,
                 // Thêm thông tin User nếu có
                 UserName = post.User?.Name ?? string.Empty,
-                UserAvatar = post.User?.Avatar ?? string.Empty,
-                UserAvatarImage = !string.IsNullOrEmpty(post.User?.Avatar) && post.User.Avatar.StartsWith("data:image") ? post.User.Avatar : null,
+                // Phân biệt avatar: nếu là URL (http/https) hoặc base64 (data:image) → UserAvatarImage, còn lại (emoji) → UserAvatar
+                UserAvatar = !string.IsNullOrEmpty(post.User?.Avatar) && 
+                             !post.User.Avatar.StartsWith("data:image") && 
+                             !post.User.Avatar.StartsWith("http://") && 
+                             !post.User.Avatar.StartsWith("https://") 
+                             ? post.User.Avatar : "🌱", // Emoji default nếu là URL hoặc base64
+                UserAvatarImage = !string.IsNullOrEmpty(post.User?.Avatar) && 
+                                 (post.User.Avatar.StartsWith("data:image") || 
+                                  post.User.Avatar.StartsWith("http://") || 
+                                  post.User.Avatar.StartsWith("https://")) 
+                                 ? post.User.Avatar : null,
                 // Like and Comment information
                 LikesCount = post.Likes?.Count ?? 0,
                 Comments = post.Comments?.Select(c => new CommentDTO
@@ -345,8 +354,17 @@ namespace EcoTokenSystem.Application.Services
                     PostId = c.PostId,
                     UserId = c.UserId,
                     UserName = c.User?.Name ?? "Người dùng",
-                    UserAvatar = c.User?.Avatar ?? string.Empty,
-                    UserAvatarImage = !string.IsNullOrEmpty(c.User?.Avatar) && c.User.Avatar.StartsWith("data:image") ? c.User.Avatar : null,
+                    // Phân biệt avatar: nếu là URL (http/https) hoặc base64 (data:image) → UserAvatarImage, còn lại (emoji) → UserAvatar
+                    UserAvatar = !string.IsNullOrEmpty(c.User?.Avatar) && 
+                                 !c.User.Avatar.StartsWith("data:image") && 
+                                 !c.User.Avatar.StartsWith("http://") && 
+                                 !c.User.Avatar.StartsWith("https://") 
+                                 ? c.User.Avatar : "🌱", // Emoji default nếu là URL hoặc base64
+                    UserAvatarImage = !string.IsNullOrEmpty(c.User?.Avatar) && 
+                                     (c.User.Avatar.StartsWith("data:image") || 
+                                      c.User.Avatar.StartsWith("http://") || 
+                                      c.User.Avatar.StartsWith("https://")) 
+                                     ? c.User.Avatar : null,
                     Content = c.Content,
                     CreatedAt = c.CreatedAt
                 }).ToList() ?? new List<CommentDTO>(),

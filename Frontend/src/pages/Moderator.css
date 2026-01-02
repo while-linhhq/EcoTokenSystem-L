@@ -114,6 +114,11 @@
   gap: 12px;
 }
 
+.action-user-avatar-wrapper {
+  position: relative;
+  flex-shrink: 0;
+}
+
 .user-avatar {
   width: 50px;
   height: 50px;
@@ -133,6 +138,7 @@
   object-fit: cover;
   border: 2px solid #4a7c2a;
   flex-shrink: 0;
+  display: block;
 }
 
 .user-info {
@@ -296,6 +302,11 @@
   min-width: 0;
 }
 
+.action-list-user-avatar-wrapper {
+  position: relative;
+  flex-shrink: 0;
+}
+
 .list-user-avatar {
   width: 32px;
   height: 32px;
@@ -314,6 +325,7 @@
   border-radius: 50%;
   object-fit: cover;
   flex-shrink: 0;
+  display: block;
 }
 
 .list-user-name {
