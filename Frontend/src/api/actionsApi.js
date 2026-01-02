@@ -275,7 +275,11 @@ export const getPendingActionsApi = async () => {
         // Lấy thông tin user từ DTO (đã được map từ PostService)
         const userName = post.UserName || post.userName || 'Người dùng';
         const userAvatar = post.UserAvatar || post.userAvatar || '🌱';
-        const userAvatarImage = post.UserAvatarImage || post.userAvatarImage || null;
+        const userAvatarImageRaw = post.UserAvatarImage || post.userAvatarImage;
+        // Normalize userAvatarImage - nếu là base64 giữ nguyên, nếu là URL path thì normalize
+        const userAvatarImage = userAvatarImageRaw
+          ? (userAvatarImageRaw.startsWith('data:image') ? userAvatarImageRaw : normalizeImageUrl(userAvatarImageRaw))
+          : null;
 
         const awardedPoints = post.AwardedPoints ?? post.awardedPoints ?? 0;
         const rewards = status === 'approved' ? {
