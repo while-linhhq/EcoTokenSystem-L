@@ -17,17 +17,41 @@ export const getStoriesApi = async () => {
     // Public endpoint - no authentication required
     const result = await apiGet('/Stories', false);
     
+    console.log('[getStoriesApi] Raw API result:', result);
+    
     // Handle different response formats
     let stories = [];
-    if (Array.isArray(result.data)) {
-      stories = result.data;
-    } else if (result.data?.Data && Array.isArray(result.data.Data)) {
-      stories = result.data.Data;
+    
+    // Backend returns ResponseDTO<List<StoryDTO>> with structure:
+    // { IsSuccess: true, Message: "...", Data: [...] }
+    if (result && result.success !== false) {
+      // Check if result.data is an array directly
+      if (Array.isArray(result.data)) {
+        stories = result.data;
+      }
+      // Check if result.data.Data exists (ResponseDTO format)
+      else if (result.data?.Data && Array.isArray(result.data.Data)) {
+        stories = result.data.Data;
+      }
+      // Check if result.data.data exists (lowercase)
+      else if (result.data?.data && Array.isArray(result.data.data)) {
+        stories = result.data.data;
+      }
+      // Check if result.data itself is the ResponseDTO with Data property
+      else if (result.data && typeof result.data === 'object' && 'IsSuccess' in result.data) {
+        if (Array.isArray(result.data.Data)) {
+          stories = result.data.Data;
+        } else if (Array.isArray(result.data.data)) {
+          stories = result.data.data;
+        }
+      }
     }
+    
+    console.log('[getStoriesApi] Parsed stories:', stories);
     
     return { success: true, data: stories };
   } catch (error) {
-    console.error('Error fetching stories:', error);
+    console.error('[getStoriesApi] Error fetching stories:', error);
     return { success: false, message: error.message, data: [] };
   }
 };

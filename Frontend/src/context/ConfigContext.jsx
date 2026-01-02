@@ -28,14 +28,7 @@ export const ConfigProvider = ({ children }) => {
     },
     actionRewards: {
       default: { streak: 1, ecoTokens: 10 },
-      tags: {
-        'xe-dap': { streak: 1, ecoTokens: 15 },
-        'mang-coc': { streak: 1, ecoTokens: 12 },
-        'trong-cay': { streak: 1, ecoTokens: 20 },
-        'phan-loai-rac': { streak: 1, ecoTokens: 12 },
-        'binh-nuoc': { streak: 1, ecoTokens: 10 },
-        'tui-vai': { streak: 1, ecoTokens: 10 }
-      }
+      milestones: {}
     }
   });
   const [loading, setLoading] = useState(false);
@@ -82,9 +75,9 @@ export const ConfigProvider = ({ children }) => {
     }
   };
 
-  const updateActionReward = async (tag, reward) => {
+  const updateActionReward = async (streakMilestone, bonusTokens) => {
     try {
-      const response = await updateActionRewardApi(tag, reward);
+      const response = await updateActionRewardApi(streakMilestone, bonusTokens);
       if (response.success) {
         setConfig(response.data);
         return { success: true, message: response.message };
@@ -111,7 +104,9 @@ export const ConfigProvider = ({ children }) => {
   };
 
   const getActionReward = (tag) => {
-    return config.actionRewards.tags[tag] || config.actionRewards.default;
+    // Legacy function for backward compatibility - returns default reward
+    // Milestones are handled separately
+    return config.actionRewards.default;
   };
 
   const deleteStreakMilestone = async (streak) => {
@@ -126,9 +121,9 @@ export const ConfigProvider = ({ children }) => {
     }
   };
 
-  const deleteActionReward = async (tag) => {
+  const deleteActionReward = async (streakMilestone) => {
     try {
-      const response = await deleteActionRewardApi(tag);
+      const response = await deleteActionRewardApi(streakMilestone);
       if (response.success) {
         setConfig(response.data);
         return { success: true, message: response.message };

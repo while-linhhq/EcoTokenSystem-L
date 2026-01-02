@@ -82,7 +82,27 @@ namespace EcoTokenSystem.API.Controllers
 
             try
             {
-                var response = await configService.UpdateActionRewardAsync(request.Tag, request.Reward);
+                var response = await configService.UpdateActionRewardAsync(request.StreakMilestone, request.BonusTokens);
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new ResponseDTO { IsSuccess = false, Message = $"Lỗi Server: {ex.Message}" });
+            }
+        }
+
+        [HttpPatch("action-rewards/default")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> UpdateDefaultActionReward([FromBody] ActionRewardDTO reward)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            try
+            {
+                var response = await configService.UpdateDefaultActionRewardAsync(reward);
                 return Ok(response);
             }
             catch (Exception ex)
@@ -107,13 +127,13 @@ namespace EcoTokenSystem.API.Controllers
             }
         }
 
-        [HttpDelete("action-rewards/{tag}")]
+        [HttpDelete("action-rewards/{streakMilestone}")]
         [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> DeleteActionReward([FromRoute] string tag)
+        public async Task<IActionResult> DeleteActionReward([FromRoute] string streakMilestone)
         {
             try
             {
-                var response = await configService.DeleteActionRewardAsync(tag);
+                var response = await configService.DeleteActionRewardAsync(streakMilestone);
                 if (response.IsSuccess) return Ok(response);
                 return BadRequest(response);
             }
