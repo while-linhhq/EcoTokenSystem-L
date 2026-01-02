@@ -20,7 +20,7 @@ namespace EcoTokenSystem.Application.DTOs
     public class ActionRewardsDTO
     {
         public ActionRewardDTO Default { get; set; } = new ActionRewardDTO();
-        public Dictionary<string, ActionRewardDTO> Tags { get; set; } = new Dictionary<string, ActionRewardDTO>();
+        public Dictionary<string, int> Milestones { get; set; } = new Dictionary<string, int>(); // Key: streak (string), Value: bonus tokens (int)
     }
 
     public class ActionRewardDTO
@@ -43,8 +43,8 @@ namespace EcoTokenSystem.Application.DTOs
 
     public class UpdateActionRewardRequestDTO
     {
-        public string? Tag { get; set; } // null = update default
-        public ActionRewardDTO Reward { get; set; } = new ActionRewardDTO();
+        public string? StreakMilestone { get; set; } // null = update default, otherwise streak milestone (string)
+        public int BonusTokens { get; set; } // Bonus tokens when reaching this streak milestone
     }
 }
 

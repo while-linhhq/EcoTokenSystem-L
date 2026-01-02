@@ -4,7 +4,8 @@ import { useConfig } from '../context/ConfigContext';
 import { useUsers } from '../context/UsersContext';
 import { getAllItemsApi, addItemApi, updateItemApi, deleteItemApi } from '../api/itemsAdminApi';
 import { getAllExchangesApi, updateShippedStatusApi } from '../api/adminExchangesApi';
-import { formatDate, formatDateForInput } from '../utils/dateUtils';
+import { formatDate } from '../utils/dateUtils';
+import { UserPlus, Package, Users, Gift, ShoppingCart } from 'lucide-react';
 import './Admin.css';
 
 const Admin = () => {
@@ -75,9 +76,8 @@ const Admin = () => {
   const [actionToDelete, setActionToDelete] = useState(null);
   const [isEditingDefault, setIsEditingDefault] = useState(false);
   const [actionForm, setActionForm] = useState({
-    tag: '',
-    streak: '1',
-    ecoTokens: '10'
+    streakMilestone: '',
+    bonusTokens: ''
   });
 
   const [filteredUsers, setFilteredUsers] = useState([]);
@@ -502,26 +502,24 @@ const Admin = () => {
   // Action Reward Handlers
   const handleOpenAddActionModal = () => {
     setIsEditingDefault(false);
-    setActionForm({ tag: '', streak: '1', ecoTokens: '10' });
+    setActionForm({ streakMilestone: '', bonusTokens: '' });
     setShowActionModal(true);
   };
 
   const handleOpenEditDefaultModal = () => {
     setIsEditingDefault(true);
     setActionForm({
-      tag: '', // Empty tag for default
-      streak: (config.actionRewards?.default?.streak || 1).toString(),
-      ecoTokens: (config.actionRewards?.default?.ecoTokens || 10).toString()
+      streakMilestone: '',
+      bonusTokens: ''
     });
     setShowActionModal(true);
   };
 
-  const handleOpenEditActionModal = (tag, reward) => {
+  const handleOpenEditActionModal = (streakMilestone, bonusTokens) => {
     setIsEditingDefault(false);
     setActionForm({
-      tag: tag,
-      streak: (reward.streak || 1).toString(),
-      ecoTokens: (reward.ecoTokens || 10).toString()
+      streakMilestone: streakMilestone,
+      bonusTokens: bonusTokens.toString()
     });
     setShowActionModal(true);
   };
@@ -529,7 +527,7 @@ const Admin = () => {
   const handleCloseActionModal = () => {
     setShowActionModal(false);
     setIsEditingDefault(false);
-    setActionForm({ tag: '', streak: '1', ecoTokens: '10' });
+    setActionForm({ streakMilestone: '', bonusTokens: '' });
   };
 
   const handleSubmitAction = async (e) => {
@@ -539,8 +537,8 @@ const Admin = () => {
     if (isEditingDefault) {
       try {
         const result = await updateDefaultActionReward({
-          streak: parseInt(actionForm.streak),
-          ecoTokens: parseInt(actionForm.ecoTokens)
+          streak: parseInt(config.actionRewards?.default?.streak || 1),
+          ecoTokens: parseInt(config.actionRewards?.default?.ecoTokens || 10)
         });
         if (result.success) {
           alert(result.message || 'Đã cập nhật phần thưởng mặc định');
@@ -555,30 +553,33 @@ const Admin = () => {
       return;
     }
 
-    // Nếu đang add/edit action reward có tag
-    if (!actionForm.tag) {
-      alert('Vui lòng nhập tag');
+    // Nếu đang add/edit action reward milestone
+    if (!actionForm.streakMilestone || !actionForm.bonusTokens) {
+      alert('Vui lòng nhập đầy đủ streak milestone và bonus tokens');
+      return;
+    }
+    const streakMilestone = actionForm.streakMilestone.trim();
+    const bonusTokens = parseInt(actionForm.bonusTokens);
+    if (isNaN(bonusTokens) || bonusTokens < 0) {
+      alert('Bonus tokens phải là số nguyên dương');
       return;
     }
     try {
-      const result = await updateActionReward(actionForm.tag, {
-        streak: parseInt(actionForm.streak),
-        ecoTokens: parseInt(actionForm.ecoTokens)
-      });
+      const result = await updateActionReward(streakMilestone, bonusTokens);
       if (result.success) {
-        alert(result.message || 'Đã cập nhật phần thưởng');
+        alert(result.message || 'Đã cập nhật phần thưởng milestone');
         handleCloseActionModal();
       } else {
-        alert(result.message || 'Có lỗi xảy ra khi cập nhật phần thưởng');
+        alert(result.message || 'Có lỗi xảy ra khi cập nhật phần thưởng milestone');
       }
     } catch (error) {
-      console.error('[Admin] Error submitting action:', error);
+      console.error('[Admin] Error submitting action milestone:', error);
       alert('Có lỗi xảy ra: ' + (error.message || 'Không xác định'));
     }
   };
 
-  const handleOpenDeleteActionModal = (tag) => {
-    setActionToDelete(tag);
+  const handleOpenDeleteActionModal = (streakMilestone) => {
+    setActionToDelete(streakMilestone);
     setShowDeleteActionModal(true);
   };
 
@@ -607,7 +608,7 @@ const Admin = () => {
   return (
     <div className="admin-container">
       <div className="admin-header">
-        <h1>👑 Trang Quản Trị</h1>
+        <h1> Trang Quản Trị</h1>
         <p>Xin chào, {user?.nickname || 'Admin'}</p>
       </div>
 
@@ -616,34 +617,36 @@ const Admin = () => {
           className={activeTab === 'moderators' ? 'active' : ''}
           onClick={() => setActiveTab('moderators')}
         >
-          <UserPlus size={18} style={{ marginRight: '8px' }} />
-          Tạo người kiểm duyệt / người dùng
+          <UserPlus size={18} className="tab-icon" />
+          <span className="tab-text">Tạo người kiểm duyệt / người dùng</span>
         </button>
         <button
           className={activeTab === 'items' ? 'active' : ''}
           onClick={() => setActiveTab('items')}
         >
-          <Package size={18} style={{ marginRight: '8px' }} />
-          Quản lý quà đổi
+          <Package size={18} className="tab-icon" />
+          <span className="tab-text">Quản lý quà</span>
         </button>
         <button
           className={activeTab === 'rewards' ? 'active' : ''}
           onClick={() => setActiveTab('rewards')}
         >
-          🎁 Phần thưởng
+          <Gift size={18} className="tab-icon" />
+          <span className="tab-text">Phần thưởng</span>
         </button>
         <button
           className={activeTab === 'users' ? 'active' : ''}
           onClick={() => setActiveTab('users')}
         >
-          <Users size={18} style={{ marginRight: '8px' }} />
-          Quản lý người dùng
+          <Users size={18} className="tab-icon" />
+          <span className="tab-text">Quản lý người dùng</span>
         </button>
         <button
           className={activeTab === 'exchanges' ? 'active' : ''}
           onClick={() => setActiveTab('exchanges')}
         >
-          📦 Quản lý Đổi Quà
+          <ShoppingCart size={18} className="tab-icon" />
+          <span className="tab-text">Quản lý đổi quà</span>
         </button>
       </div>
 
@@ -706,21 +709,19 @@ const Admin = () => {
 
       {activeTab === 'items' && (
         <div className="admin-section">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-            <h2 style={{ margin: 0 }}>Quản lý Items (Quà tặng)</h2>
-            <button
-              onClick={handleOpenAddItemModal}
-              className="submit-btn"
-              style={{ padding: '10px 20px', fontSize: '1em' }}
-            >
-              + Thêm Item mới
-            </button>
-          </div>
-
           {/* Category Filter */}
-          <div style={{ marginBottom: '20px' }}>
-            <h3>Danh sách Items</h3>
-            <div className="category-filter" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '20px' }}>
+          <div style={{ marginBottom: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+              <h3 style={{ margin: 0, fontSize: '1.4em' }}>Danh sách quà</h3>
+              <button
+                onClick={handleOpenAddItemModal}
+                className="submit-btn"
+                style={{ padding: '8px 16px', fontSize: '0.9em' }}
+              >
+                + Thêm phần quà mới
+              </button>
+            </div>
+            <div className="category-filter" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '16px' }}>
               {categories.map(category => (
                 <button
                   key={category}
@@ -896,8 +897,6 @@ const Admin = () => {
 
       {activeTab === 'rewards' && (
         <div className="admin-section">
-          <h2>Quản lý Phần thưởng</h2>
-
           {/* Sub-tabs */}
           <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', borderBottom: '2px solid #e0e0e0' }}>
             <button
@@ -1006,13 +1005,13 @@ const Admin = () => {
           {rewardsSubTab === 'actions' && (
             <>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                <h3 style={{ margin: 0 }}>Quy ước điểm bài đăng sống xanh theo tag</h3>
+                <h3 style={{ margin: 0 }}>Phần thưởng milestone theo streak</h3>
                 <button
                   onClick={handleOpenAddActionModal}
                   className="submit-btn"
                   style={{ padding: '10px 20px', fontSize: '1em' }}
                 >
-                  + Thêm Reward
+                  + Thêm Milestone
                 </button>
               </div>
 
@@ -1021,7 +1020,10 @@ const Admin = () => {
                 <h4 style={{ margin: '0 0 15px 0' }}>Phần thưởng mặc định</h4>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
-                    <div><strong>Mặc định:</strong> {config.actionRewards?.default?.streak || 1} Streak, {config.actionRewards?.default?.ecoTokens || 10} Tokens</div>
+                    <div><strong>Mặc định:</strong> 1 Streak = {config.actionRewards?.default?.ecoTokens || 10} Tokens</div>
+                    <div style={{ color: '#666', fontSize: '0.9em', marginTop: '5px' }}>
+                      Mỗi bài viết được duyệt sẽ nhận {config.actionRewards?.default?.ecoTokens || 10} tokens
+                    </div>
                   </div>
                   <button
                     onClick={handleOpenEditDefaultModal}
@@ -1040,19 +1042,24 @@ const Admin = () => {
                 </div>
               </div>
 
-              {/* Action Rewards List */}
+              {/* Action Rewards Milestones List */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '15px', marginTop: '20px' }}>
-                {Object.entries(config.actionRewards?.tags || {}).map(([tag, reward]) => (
-                  <div key={tag} className="config-item" style={{ padding: '15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                {Object.entries(config.actionRewards?.milestones || {})
+                  .sort(([a], [b]) => parseInt(a) - parseInt(b))
+                  .map(([streakMilestone, bonusTokens]) => (
+                  <div key={streakMilestone} className="config-item" style={{ padding: '15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
-                      <div><strong>Tag: {tag}</strong></div>
+                      <div><strong>Streak {streakMilestone}</strong></div>
                       <div style={{ color: '#666', marginTop: '5px' }}>
-                        {reward.streak || 1} Streak, {reward.ecoTokens || 10} Tokens
+                        Thưởng thêm: +{bonusTokens} Tokens
+                      </div>
+                      <div style={{ color: '#999', fontSize: '0.85em', marginTop: '3px' }}>
+                        Khi đạt {streakMilestone} streak liên tiếp
                       </div>
                     </div>
                     <div style={{ display: 'flex', gap: '10px' }}>
                       <button
-                        onClick={() => handleOpenEditActionModal(tag, reward)}
+                        onClick={() => handleOpenEditActionModal(streakMilestone, bonusTokens)}
                         style={{
                           padding: '8px 16px',
                           backgroundColor: '#4a7c2a',
@@ -1066,7 +1073,7 @@ const Admin = () => {
                         Sửa
                       </button>
                       <button
-                        onClick={() => handleOpenDeleteActionModal(tag)}
+                        onClick={() => handleOpenDeleteActionModal(streakMilestone)}
                         style={{
                           padding: '8px 16px',
                           backgroundColor: '#dc3545',
@@ -1082,9 +1089,9 @@ const Admin = () => {
                     </div>
                   </div>
                 ))}
-                {Object.keys(config.actionRewards?.tags || {}).length === 0 && (
+                {Object.keys(config.actionRewards?.milestones || {}).length === 0 && (
                   <div style={{ textAlign: 'center', padding: '40px', color: '#666', gridColumn: '1 / -1' }}>
-                    <p>Chưa có action reward nào. Nhấn "+ Thêm Reward" để thêm mới.</p>
+                    <p>Chưa có milestone nào. Nhấn "+ Thêm Milestone" để thêm mới.</p>
                   </div>
                 )}
               </div>
@@ -1095,7 +1102,6 @@ const Admin = () => {
 
       {activeTab === 'users' && (
         <div className="admin-section">
-          <h2>Quản lý User</h2>
           <div className="search-box">
             <input
               type="text"
@@ -1224,8 +1230,6 @@ const Admin = () => {
 
       {activeTab === 'exchanges' && (
         <div className="admin-section">
-          <h2>📦 Quản lý Đổi Quà</h2>
-
           <div className="exchanges-filters">
             <div className="filter-group">
               <label>Lọc theo ngày:</label>
@@ -1828,68 +1832,81 @@ const Admin = () => {
               <h3>
                 {isEditingDefault
                   ? 'Chỉnh sửa Phần thưởng Mặc định'
-                  : (actionForm.tag && config.actionRewards?.tags?.[actionForm.tag]
-                    ? `Chỉnh sửa Action Reward: ${actionForm.tag}`
-                    : 'Thêm Action Reward mới')}
+                  : (actionForm.streakMilestone && config.actionRewards?.milestones?.[actionForm.streakMilestone] !== undefined
+                    ? `Chỉnh sửa Milestone: Streak ${actionForm.streakMilestone}`
+                    : 'Thêm Milestone mới')}
               </h3>
               <button className="modal-close" onClick={handleCloseActionModal}>×</button>
             </div>
             <form onSubmit={handleSubmitAction} className="modal-form">
               {isEditingDefault ? (
-                <div className="form-group">
-                  <label>Phần thưởng mặc định</label>
-                  <input
-                    type="text"
-                    value="Mặc định (áp dụng cho tất cả các tag không có cấu hình riêng)"
-                    disabled
-                    style={{ background: '#f5f5f5', color: '#666' }}
-                  />
-                </div>
-              ) : actionForm.tag && config.actionRewards?.tags?.[actionForm.tag] ? (
-                <div className="form-group">
-                  <label>Tag hành động</label>
-                  <input
-                    type="text"
-                    value={actionForm.tag}
-                    disabled
-                    style={{ background: '#f5f5f5' }}
-                  />
-                </div>
+                <>
+                  <div className="form-group">
+                    <label>Phần thưởng mặc định</label>
+                    <input
+                      type="text"
+                      value="Mặc định: 1 Streak = 10 Tokens (mỗi bài viết được duyệt)"
+                      disabled
+                      style={{ background: '#f5f5f5', color: '#666' }}
+                    />
+                  </div>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Tokens mỗi Streak</label>
+                      <input
+                        type="number"
+                        value={config.actionRewards?.default?.ecoTokens || 10}
+                        disabled
+                        style={{ background: '#f5f5f5' }}
+                      />
+                    </div>
+                  </div>
+                  <div style={{ padding: '10px', backgroundColor: '#fff3cd', borderRadius: '5px', marginBottom: '15px', fontSize: '0.9em', color: '#856404' }}>
+                    ⚠️ Phần thưởng mặc định được quản lý riêng. Vui lòng liên hệ developer để thay đổi.
+                  </div>
+                </>
               ) : (
-                <div className="form-group">
-                  <label>Tag hành động *</label>
-                  <input
-                    type="text"
-                    value={actionForm.tag}
-                    onChange={(e) => setActionForm({ ...actionForm, tag: e.target.value })}
-                    placeholder="Ví dụ: xe-dap, trong-cay, mang-coc"
-                    required
-                  />
-                </div>
+                <>
+                  <div className="form-group">
+                    <label>Streak Milestone *</label>
+                    <input
+                      type="number"
+                      value={actionForm.streakMilestone}
+                      onChange={(e) => setActionForm({ ...actionForm, streakMilestone: e.target.value })}
+                      placeholder="Ví dụ: 10 (khi đạt 10 streak)"
+                      min="2"
+                      required
+                      disabled={actionForm.streakMilestone && config.actionRewards?.milestones?.[actionForm.streakMilestone] !== undefined}
+                      style={actionForm.streakMilestone && config.actionRewards?.milestones?.[actionForm.streakMilestone] !== undefined ? { background: '#f5f5f5' } : {}}
+                    />
+                    <small style={{ color: '#666', fontSize: '0.85em' }}>
+                      Số streak cần đạt để nhận bonus tokens
+                    </small>
+                  </div>
+                  <div className="form-group">
+                    <label>Bonus Tokens *</label>
+                    <input
+                      type="number"
+                      value={actionForm.bonusTokens}
+                      onChange={(e) => setActionForm({ ...actionForm, bonusTokens: e.target.value })}
+                      placeholder="Ví dụ: 20 (thưởng thêm 20 tokens)"
+                      min="1"
+                      required
+                    />
+                    <small style={{ color: '#666', fontSize: '0.85em' }}>
+                      Số tokens thưởng thêm khi đạt milestone này
+                    </small>
+                  </div>
+                  {actionForm.streakMilestone && actionForm.bonusTokens && !isNaN(parseInt(actionForm.bonusTokens)) && (
+                    <div style={{ padding: '10px', backgroundColor: '#d1ecf1', borderRadius: '5px', marginBottom: '15px', fontSize: '0.9em', color: '#0c5460' }}>
+                      💡 Khi user đạt {actionForm.streakMilestone} streak liên tiếp, họ sẽ nhận thêm {actionForm.bonusTokens} tokens (ngoài {config.actionRewards?.default?.ecoTokens || 10} tokens mặc định cho mỗi streak)
+                    </div>
+                  )}
+                </>
               )}
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Streak</label>
-                  <input
-                    type="number"
-                    value={actionForm.streak}
-                    onChange={(e) => setActionForm({ ...actionForm, streak: e.target.value })}
-                    min="0"
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Eco Tokens</label>
-                  <input
-                    type="number"
-                    value={actionForm.ecoTokens}
-                    onChange={(e) => setActionForm({ ...actionForm, ecoTokens: e.target.value })}
-                    min="0"
-                  />
-                </div>
-              </div>
               <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
-                <button type="submit" className="submit-btn" style={{ flex: 1 }}>
-                  {isEditingDefault ? 'Cập nhật Mặc định' : (actionForm.tag && config.actionRewards?.tags?.[actionForm.tag] ? 'Cập nhật' : 'Thêm mới')}
+                <button type="submit" className="submit-btn" style={{ flex: 1 }} disabled={isEditingDefault}>
+                  {isEditingDefault ? 'Không thể sửa' : (actionForm.streakMilestone && config.actionRewards?.milestones?.[actionForm.streakMilestone] !== undefined ? 'Cập nhật' : 'Thêm mới')}
                 </button>
                 <button
                   type="button"
@@ -1919,11 +1936,14 @@ const Admin = () => {
         <div className="modal-overlay" onClick={handleCloseDeleteActionModal}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '400px' }}>
             <div className="modal-header">
-              <h3>Xác nhận xóa Action Reward</h3>
+              <h3>Xác nhận xóa Milestone</h3>
               <button className="modal-close" onClick={handleCloseDeleteActionModal}>×</button>
             </div>
             <div className="modal-body">
-              <p>Bạn có chắc chắn muốn xóa action reward cho tag <strong>"{actionToDelete}"</strong>?</p>
+              <p>Bạn có chắc chắn muốn xóa milestone cho streak <strong>"{actionToDelete}"</strong>?</p>
+              <p style={{ fontSize: '0.9em', marginTop: '10px', color: '#666' }}>
+                Milestone này sẽ bị xóa và users sẽ không còn nhận bonus tokens khi đạt {actionToDelete} streak.
+              </p>
               <p style={{ color: '#dc3545', fontSize: '0.9em', marginTop: '10px' }}>
                 ⚠️ Hành động này không thể hoàn tác.
               </p>

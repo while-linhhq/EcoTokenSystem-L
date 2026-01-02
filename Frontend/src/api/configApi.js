@@ -1,24 +1,17 @@
-// ============================================
-// CONFIG API - GỌI BACKEND THẬT
-// ============================================
+/**
+ * Config API
+ *
+ * API functions for managing system configuration (gift prices, streak milestones, action rewards)
+ */
+
 import { apiGet, apiPatch, apiDelete } from './apiClient';
 
-/**
- * Helper function: Map streakMilestones từ PascalCase (backend) sang camelCase (frontend)
- */
-const mapStreakMilestones = (rawStreakMilestones) => {
-  if (!rawStreakMilestones || typeof rawStreakMilestones !== 'object') {
-    return {};
-  }
-  
+const mapStreakMilestones = (rawMilestones) => {
   const mapped = {};
-  Object.keys(rawStreakMilestones).forEach(key => {
-    const milestone = rawStreakMilestones[key];
-    mapped[key] = {
-      emoji: milestone.Emoji || milestone.emoji || '🌱',
-      color: milestone.Color || milestone.color || '#4a7c2a',
-      name: milestone.Name || milestone.name || 'Linh vật'
-    };
+  if (!rawMilestones || typeof rawMilestones !== 'object') return mapped;
+  
+  Object.entries(rawMilestones).forEach(([key, value]) => {
+    mapped[key] = value;
   });
   
   return mapped;
@@ -45,7 +38,7 @@ export const getConfigApi = async () => {
           streakMilestones: mapStreakMilestones(rawStreakMilestones),
           actionRewards: configData.ActionRewards || configData.actionRewards || {
             default: { streak: 1, ecoTokens: 10 },
-            tags: {}
+            milestones: {}
           }
         }
       };
@@ -60,14 +53,7 @@ export const getConfigApi = async () => {
       },
       actionRewards: {
         default: { streak: 1, ecoTokens: 10 },
-        tags: {
-          'xe-dap': { streak: 1, ecoTokens: 15 },
-          'mang-coc': { streak: 1, ecoTokens: 12 },
-          'trong-cay': { streak: 1, ecoTokens: 20 },
-          'phan-loai-rac': { streak: 1, ecoTokens: 12 },
-          'binh-nuoc': { streak: 1, ecoTokens: 10 },
-          'tui-vai': { streak: 1, ecoTokens: 10 }
-        }
+        milestones: {}
       }
     };
 
@@ -90,14 +76,7 @@ export const getConfigApi = async () => {
         },
         actionRewards: {
           default: { streak: 1, ecoTokens: 10 },
-          tags: {
-            'xe-dap': { streak: 1, ecoTokens: 15 },
-            'mang-coc': { streak: 1, ecoTokens: 12 },
-            'trong-cay': { streak: 1, ecoTokens: 20 },
-            'phan-loai-rac': { streak: 1, ecoTokens: 12 },
-            'binh-nuoc': { streak: 1, ecoTokens: 10 },
-            'tui-vai': { streak: 1, ecoTokens: 10 }
-          }
+          milestones: {}
         }
       }
     };
@@ -124,7 +103,7 @@ export const updateGiftPriceApi = async (giftId, price) => {
           streakMilestones: mapStreakMilestones(rawStreakMilestones),
           actionRewards: configData.ActionRewards || configData.actionRewards || {
             default: { streak: 1, ecoTokens: 10 },
-            tags: {}
+            milestones: {}
           }
         }
       };
@@ -144,7 +123,7 @@ export const updateGiftPriceApi = async (giftId, price) => {
 export const updateStreakMilestoneApi = async (streak, milestone) => {
   try {
     const response = await apiPatch('/Config/streak-milestones', {
-      streak: streak.toString(),
+      streak: streak,
       milestone: milestone
     }, true); // Cần auth (Admin)
 
@@ -159,7 +138,7 @@ export const updateStreakMilestoneApi = async (streak, milestone) => {
           streakMilestones: mapStreakMilestones(rawStreakMilestones),
           actionRewards: configData.ActionRewards || configData.actionRewards || {
             default: { streak: 1, ecoTokens: 10 },
-            tags: {}
+            milestones: {}
           }
         }
       };
@@ -174,13 +153,13 @@ export const updateStreakMilestoneApi = async (streak, milestone) => {
   }
 };
 
-// Update action reward API
+// Update action reward milestone API
 // PATCH /api/Config/action-rewards
-export const updateActionRewardApi = async (tag, reward) => {
+export const updateActionRewardApi = async (streakMilestone, bonusTokens) => {
   try {
     const response = await apiPatch('/Config/action-rewards', {
-      tag: tag,
-      reward: reward
+      streakMilestone: streakMilestone,
+      bonusTokens: bonusTokens
     }, true); // Cần auth (Admin)
 
     if (response.success && response.data) {
@@ -194,7 +173,7 @@ export const updateActionRewardApi = async (tag, reward) => {
           streakMilestones: mapStreakMilestones(rawStreakMilestones),
           actionRewards: configData.ActionRewards || configData.actionRewards || {
             default: { streak: 1, ecoTokens: 10 },
-            tags: {}
+            milestones: {}
           }
         }
       };
@@ -210,13 +189,10 @@ export const updateActionRewardApi = async (tag, reward) => {
 };
 
 // Update default action reward API
-// PATCH /api/Config/action-rewards (tag = null)
+// PATCH /api/Config/action-rewards/default
 export const updateDefaultActionRewardApi = async (reward) => {
   try {
-    const response = await apiPatch('/Config/action-rewards', {
-      tag: null, // null = update default
-      reward: reward
-    }, true); // Cần auth (Admin)
+    const response = await apiPatch('/Config/action-rewards/default', reward, true); // Cần auth (Admin)
 
     if (response.success && response.data) {
       const configData = response.data.Data || response.data.data || response.data;
@@ -229,7 +205,7 @@ export const updateDefaultActionRewardApi = async (reward) => {
           streakMilestones: mapStreakMilestones(rawStreakMilestones),
           actionRewards: configData.ActionRewards || configData.actionRewards || {
             default: { streak: 1, ecoTokens: 10 },
-            tags: {}
+            milestones: {}
           }
         }
       };
@@ -261,7 +237,7 @@ export const deleteStreakMilestoneApi = async (streak) => {
           streakMilestones: mapStreakMilestones(rawStreakMilestones),
           actionRewards: configData.ActionRewards || configData.actionRewards || {
             default: { streak: 1, ecoTokens: 10 },
-            tags: {}
+            milestones: {}
           }
         }
       };
@@ -276,35 +252,34 @@ export const deleteStreakMilestoneApi = async (streak) => {
   }
 };
 
-// Delete action reward API
-// DELETE /api/Config/action-rewards/{tag}
-export const deleteActionRewardApi = async (tag) => {
+// Delete action reward milestone API
+// DELETE /api/Config/action-rewards/{streakMilestone}
+export const deleteActionRewardApi = async (streakMilestone) => {
   try {
-    const response = await apiDelete(`/Config/action-rewards/${tag}`, true); // Cần auth (Admin)
+    const response = await apiDelete(`/Config/action-rewards/${streakMilestone}`, true); // Cần auth (Admin)
 
     if (response.success && response.data) {
       const configData = response.data.Data || response.data.data || response.data;
       const rawStreakMilestones = configData.StreakMilestones || configData.streakMilestones || {};
       return {
         success: true,
-        message: response.message || 'Xóa action reward thành công',
+        message: response.message || 'Xóa action reward milestone thành công',
         data: {
           giftPrices: configData.GiftPrices || configData.giftPrices || {},
           streakMilestones: mapStreakMilestones(rawStreakMilestones),
           actionRewards: configData.ActionRewards || configData.actionRewards || {
             default: { streak: 1, ecoTokens: 10 },
-            tags: {}
+            milestones: {}
           }
         }
       };
     }
 
-    throw new Error(response.message || 'Xóa action reward thất bại');
+    throw new Error(response.message || 'Xóa action reward milestone thất bại');
   } catch (error) {
     return {
       success: false,
-      message: error.message || 'Xóa action reward thất bại'
+      message: error.message || 'Xóa action reward milestone thất bại'
     };
   }
 };
-

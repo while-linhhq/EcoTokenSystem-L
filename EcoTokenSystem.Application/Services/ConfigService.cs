@@ -86,15 +86,7 @@ namespace EcoTokenSystem.Application.Services
                         configDto.ActionRewards = new ActionRewardsDTO
                         {
                             Default = new ActionRewardDTO { Streak = 1, EcoTokens = 10 },
-                            Tags = new Dictionary<string, ActionRewardDTO>
-                            {
-                                { "xe-dap", new ActionRewardDTO { Streak = 1, EcoTokens = 15 } },
-                                { "mang-coc", new ActionRewardDTO { Streak = 1, EcoTokens = 12 } },
-                                { "trong-cay", new ActionRewardDTO { Streak = 1, EcoTokens = 20 } },
-                                { "phan-loai-rac", new ActionRewardDTO { Streak = 1, EcoTokens = 12 } },
-                                { "binh-nuoc", new ActionRewardDTO { Streak = 1, EcoTokens = 10 } },
-                                { "tui-vai", new ActionRewardDTO { Streak = 1, EcoTokens = 10 } }
-                            }
+                            Milestones = new Dictionary<string, int>()
                         };
                     }
                 }
@@ -104,15 +96,7 @@ namespace EcoTokenSystem.Application.Services
                     configDto.ActionRewards = new ActionRewardsDTO
                     {
                         Default = new ActionRewardDTO { Streak = 1, EcoTokens = 10 },
-                        Tags = new Dictionary<string, ActionRewardDTO>
-                        {
-                            { "xe-dap", new ActionRewardDTO { Streak = 1, EcoTokens = 15 } },
-                            { "mang-coc", new ActionRewardDTO { Streak = 1, EcoTokens = 12 } },
-                            { "trong-cay", new ActionRewardDTO { Streak = 1, EcoTokens = 20 } },
-                            { "phan-loai-rac", new ActionRewardDTO { Streak = 1, EcoTokens = 12 } },
-                            { "binh-nuoc", new ActionRewardDTO { Streak = 1, EcoTokens = 10 } },
-                            { "tui-vai", new ActionRewardDTO { Streak = 1, EcoTokens = 10 } }
-                        }
+                        Milestones = new Dictionary<string, int>()
                     };
                 }
 
@@ -244,7 +228,7 @@ namespace EcoTokenSystem.Application.Services
             }
         }
 
-        public async Task<ResponseDTO<ConfigDTO>> UpdateActionRewardAsync(string? tag, ActionRewardDTO reward)
+        public async Task<ResponseDTO<ConfigDTO>> UpdateActionRewardAsync(string? streakMilestone, int bonusTokens)
         {
             try
             {
@@ -263,7 +247,7 @@ namespace EcoTokenSystem.Application.Services
                         actionRewards = new ActionRewardsDTO
                         {
                             Default = new ActionRewardDTO { Streak = 1, EcoTokens = 10 },
-                            Tags = new Dictionary<string, ActionRewardDTO>()
+                            Milestones = new Dictionary<string, int>()
                         };
                     }
                 }
@@ -272,7 +256,7 @@ namespace EcoTokenSystem.Application.Services
                     actionRewards = new ActionRewardsDTO
                     {
                         Default = new ActionRewardDTO { Streak = 1, EcoTokens = 10 },
-                        Tags = new Dictionary<string, ActionRewardDTO>()
+                        Milestones = new Dictionary<string, int>()
                     };
                     if (actionRewardsConfig == null)
                     {
@@ -287,19 +271,24 @@ namespace EcoTokenSystem.Application.Services
                     }
                 }
 
-                if (string.IsNullOrEmpty(tag))
+                if (string.IsNullOrEmpty(streakMilestone))
                 {
-                    // Update default
-                    actionRewards.Default = reward;
+                    // This shouldn't happen for milestones - default is handled separately
+                    return new ResponseDTO<ConfigDTO>
+                    {
+                        IsSuccess = false,
+                        Message = "Vui lòng chỉ định streak milestone",
+                        Data = new ConfigDTO()
+                    };
                 }
                 else
                 {
-                    // Update tag-specific reward
-                    if (actionRewards.Tags == null)
+                    // Update milestone bonus tokens
+                    if (actionRewards.Milestones == null)
                     {
-                        actionRewards.Tags = new Dictionary<string, ActionRewardDTO>();
+                        actionRewards.Milestones = new Dictionary<string, int>();
                     }
-                    actionRewards.Tags[tag] = reward;
+                    actionRewards.Milestones[streakMilestone] = bonusTokens;
                 }
 
                 actionRewardsConfig.Value = JsonSerializer.Serialize(actionRewards);
@@ -316,6 +305,71 @@ namespace EcoTokenSystem.Application.Services
                 {
                     IsSuccess = false,
                     Message = $"Lỗi khi cập nhật phần thưởng: {ex.Message}",
+                    Data = new ConfigDTO()
+                };
+            }
+        }
+
+        public async Task<ResponseDTO<ConfigDTO>> UpdateDefaultActionRewardAsync(ActionRewardDTO reward)
+        {
+            try
+            {
+                var actionRewardsConfig = await dbContext.Configs.FirstOrDefaultAsync(c => c.Key == "ActionRewards");
+                
+                ActionRewardsDTO actionRewards;
+                if (actionRewardsConfig != null && !string.IsNullOrEmpty(actionRewardsConfig.Value))
+                {
+                    try
+                    {
+                        actionRewards = JsonSerializer.Deserialize<ActionRewardsDTO>(actionRewardsConfig.Value)
+                            ?? new ActionRewardsDTO();
+                    }
+                    catch
+                    {
+                        actionRewards = new ActionRewardsDTO
+                        {
+                            Default = new ActionRewardDTO { Streak = 1, EcoTokens = 10 },
+                            Milestones = new Dictionary<string, int>()
+                        };
+                    }
+                }
+                else
+                {
+                    actionRewards = new ActionRewardsDTO
+                    {
+                        Default = new ActionRewardDTO { Streak = 1, EcoTokens = 10 },
+                        Milestones = new Dictionary<string, int>()
+                    };
+                    if (actionRewardsConfig == null)
+                    {
+                        actionRewardsConfig = new Config
+                        {
+                            Id = Guid.NewGuid(),
+                            Key = "ActionRewards",
+                            Value = "{}",
+                            UpdatedAt = DateTime.UtcNow
+                        };
+                        dbContext.Configs.Add(actionRewardsConfig);
+                    }
+                }
+
+                // Update default
+                actionRewards.Default = reward;
+
+                actionRewardsConfig.Value = JsonSerializer.Serialize(actionRewards);
+                actionRewardsConfig.UpdatedAt = DateTime.UtcNow;
+
+                await dbContext.SaveChangesAsync();
+
+                // Return updated config
+                return await GetConfigAsync();
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO<ConfigDTO>
+                {
+                    IsSuccess = false,
+                    Message = $"Lỗi khi cập nhật phần thưởng mặc định: {ex.Message}",
                     Data = new ConfigDTO()
                 };
             }
@@ -383,16 +437,16 @@ namespace EcoTokenSystem.Application.Services
             }
         }
 
-        public async Task<ResponseDTO<ConfigDTO>> DeleteActionRewardAsync(string tag)
+        public async Task<ResponseDTO<ConfigDTO>> DeleteActionRewardAsync(string streakMilestone)
         {
             try
             {
-                if (string.IsNullOrEmpty(tag))
+                if (string.IsNullOrEmpty(streakMilestone))
                 {
                     return new ResponseDTO<ConfigDTO>
                     {
                         IsSuccess = false,
-                        Message = "Không thể xóa phần thưởng mặc định",
+                        Message = "Vui lòng chỉ định streak milestone để xóa",
                         Data = new ConfigDTO()
                     };
                 }
@@ -425,17 +479,17 @@ namespace EcoTokenSystem.Application.Services
                     };
                 }
 
-                if (actionRewards.Tags == null || !actionRewards.Tags.ContainsKey(tag))
+                if (actionRewards.Milestones == null || !actionRewards.Milestones.ContainsKey(streakMilestone))
                 {
                     return new ResponseDTO<ConfigDTO>
                     {
                         IsSuccess = false,
-                        Message = $"Không tìm thấy action reward với tag '{tag}'",
+                        Message = $"Không tìm thấy milestone với streak '{streakMilestone}'",
                         Data = new ConfigDTO()
                     };
                 }
 
-                actionRewards.Tags.Remove(tag);
+                actionRewards.Milestones.Remove(streakMilestone);
                 actionRewardsConfig.Value = JsonSerializer.Serialize(actionRewards);
                 actionRewardsConfig.UpdatedAt = DateTime.UtcNow;
 
@@ -449,7 +503,7 @@ namespace EcoTokenSystem.Application.Services
                 return new ResponseDTO<ConfigDTO>
                 {
                     IsSuccess = false,
-                    Message = $"Lỗi khi xóa action reward: {ex.Message}",
+                    Message = $"Lỗi khi xóa action reward milestone: {ex.Message}",
                     Data = new ConfigDTO()
                 };
             }
