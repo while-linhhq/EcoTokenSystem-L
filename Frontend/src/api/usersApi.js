@@ -2,7 +2,7 @@
 // USERS API - GỌI BACKEND THẬT (Admin)
 // ============================================
 import { apiGet, apiPost, apiPatch, apiDelete } from './apiClient';
-import { getAvatarImageUrl } from '../utils/imageUtils';
+import { getAvatarImageUrl, normalizeImageUrl } from '../utils/imageUtils';
 
 /**
  * Map UserListDTO từ backend sang format frontend
@@ -321,15 +321,24 @@ export const getLeaderboardApi = async (sortBy = 'tokens', limit = null) => {
       }
 
       // Map để đảm bảo format nhất quán (backend đã có JsonPropertyName nhưng vẫn cần fallback)
-      const mappedLeaderboard = leaderboard.map(entry => ({
-        userId: entry.userId || entry.UserId,
-        userName: entry.userName || entry.UserName || 'Người dùng',
-        userAvatar: entry.userAvatar || entry.UserAvatar || '🌱',
-        userAvatarImage: entry.userAvatarImage || entry.UserAvatarImage || null,
-        currentPoints: entry.currentPoints !== undefined ? entry.currentPoints : (entry.CurrentPoints || 0),
-        streak: entry.streak !== undefined ? entry.streak : (entry.Streak || 0),
-        rank: entry.rank !== undefined ? entry.rank : (entry.Rank || 0)
-      }));
+      const mappedLeaderboard = leaderboard.map(entry => {
+        const userAvatar = entry.userAvatar || entry.UserAvatar || '🌱';
+        const userAvatarImageRaw = entry.userAvatarImage || entry.UserAvatarImage;
+        // Normalize userAvatarImage giống như Admin - nếu là base64 giữ nguyên, nếu là URL thì normalize
+        const userAvatarImage = userAvatarImageRaw
+          ? (userAvatarImageRaw.startsWith('data:image') ? userAvatarImageRaw : normalizeImageUrl(userAvatarImageRaw))
+          : getAvatarImageUrl(userAvatar); // Fallback: kiểm tra xem userAvatar có phải là image URL không
+        
+        return {
+          userId: entry.userId || entry.UserId,
+          userName: entry.userName || entry.UserName || 'Người dùng',
+          userAvatar: userAvatar,
+          userAvatarImage: userAvatarImage,
+          currentPoints: entry.currentPoints !== undefined ? entry.currentPoints : (entry.CurrentPoints || 0),
+          streak: entry.streak !== undefined ? entry.streak : (entry.Streak || 0),
+          rank: entry.rank !== undefined ? entry.rank : (entry.Rank || 0)
+        };
+      });
 
       return {
         success: true,
