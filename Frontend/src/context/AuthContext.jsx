@@ -161,6 +161,27 @@ export const AuthProvider = ({ children }) => {
           };
         }
         
+        // Refresh user data to get full profile information (name, email, etc.)
+        // Use setTimeout to avoid blocking the login response
+        setTimeout(async () => {
+          try {
+            const response = await getCurrentUserApi();
+            if (response.success && response.data) {
+              const updatedUserData = {
+                ...response.data,
+                token: userToSave.token,
+                id: userToSave.id || userToSave.userId,
+                userId: userToSave.id || userToSave.userId
+              };
+              setUser(updatedUserData);
+              localStorage.setItem('user', JSON.stringify(updatedUserData));
+            }
+          } catch (error) {
+            console.error('[AuthContext] Error refreshing user after login:', error);
+            // Don't show error to user, login was successful
+          }
+        }, 100);
+        
         return { success: true, message: response.message, data: userToSave };
       }
       

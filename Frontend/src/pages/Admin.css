@@ -40,6 +40,9 @@
   border-bottom: 3px solid transparent;
   transition: all 0.3s;
   font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .admin-tabs button.active {
