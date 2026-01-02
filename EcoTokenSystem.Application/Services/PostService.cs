@@ -219,45 +219,64 @@ namespace EcoTokenSystem.Application.Services
         // --- 3. LOGIC STREAK (UpdateUserStreakAsync) ---
         private async Task UpdateUserStreakAsync(User userDomain)
         {
-            var currentApprovedDate = DateTime.UtcNow.Date;
+            var today = DateTime.UtcNow.Date;
+            var yesterday = today.AddDays(-1);
 
-            // 1. Tìm ngày ApprovedRejectedAt gần nhất của User
-            // Lấy 2 bài gần nhất để so sánh (bài vừa duyệt, và bài trước đó)
-            var lastApprovedPostDate = await _context.Posts
-                .Where(p => p.UserId == userDomain.Id && p.StatusId == ApprovedStatusId)
-                .OrderByDescending(p => p.ApprovedRejectedAt)
-                .Select(p => p.ApprovedRejectedAt)
-                .FirstOrDefaultAsync();
+            // Lấy tất cả các ngày unique có bài được duyệt, sắp xếp giảm dần (mới nhất trước)
+            var approvedDates = await _context.Posts
+                .Where(p => p.UserId == userDomain.Id && p.StatusId == ApprovedStatusId && p.ApprovedRejectedAt.HasValue)
+                .Select(p => p.ApprovedRejectedAt.Value.Date)
+                .Distinct()
+                .OrderByDescending(d => d)
+                .ToListAsync();
 
-            // 2. Xử lý logic Streak
-
-            // Kiểm tra và lấy giá trị Date, nếu nó có giá trị
-            DateTime? previousApprovedDate = lastApprovedPostDate?.Date;
-
-            if (!previousApprovedDate.HasValue)
+            if (approvedDates == null || !approvedDates.Any())
             {
-                // Trường hợp lần đầu được duyệt thành công
+                // Trường hợp không có bài nào được duyệt (không nên xảy ra vì đang trong quá trình approve)
                 userDomain.Streak = 1;
+                _context.Users.Update(userDomain);
+                return;
             }
-            else
+
+            var mostRecentDate = approvedDates[0];
+            int daysSinceMostRecent = (today - mostRecentDate).Days;
+
+            // Nếu ngày gần nhất cách quá xa (hơn 1 ngày), streak = 1 (chỉ tính ngày đó, nhưng không liên tiếp với hôm nay)
+            // Chỉ tính streak nếu ngày gần nhất là hôm nay hoặc hôm qua
+            if (daysSinceMostRecent > 1)
             {
-                // Bây giờ đã chắc chắn previousApprovedDate có giá trị (DateTime)
-                var previousDate = previousApprovedDate.Value; // Lấy giá trị DateTime
-                var timeDifference = currentApprovedDate - previousDate;
-
-                if (timeDifference.Days == 1)
-                {
-                    // Duyệt liên tiếp 1 ngày
-                    userDomain.Streak += 1;
-                }
-                else if (timeDifference.Days > 1)
-                {
-                    // Bị đứt quãng
-                    userDomain.Streak = 1;
-                }
-                // timeDifference.Days == 0: Giữ nguyên Streak
+                // Bài được duyệt cách quá xa, không còn streak liên tiếp
+                userDomain.Streak = 1;
+                _context.Users.Update(userDomain);
+                return;
             }
 
+            // Tính số ngày liên tiếp từ ngày gần nhất ngược lại về quá khứ
+            int streak = 1; // Bắt đầu từ 1 (ngày gần nhất)
+            
+            // Bắt đầu từ ngày đầu tiên (gần nhất)
+            DateTime currentDate = mostRecentDate;
+            
+            // Đếm số ngày liên tiếp
+            for (int i = 1; i < approvedDates.Count; i++)
+            {
+                DateTime nextDate = approvedDates[i];
+                int daysDiff = (currentDate - nextDate).Days;
+                
+                if (daysDiff == 1)
+                {
+                    // Ngày liên tiếp, tăng streak
+                    streak++;
+                    currentDate = nextDate;
+                }
+                else
+                {
+                    // Bị đứt quãng, dừng lại
+                    break;
+                }
+            }
+
+            userDomain.Streak = streak;
             _context.Users.Update(userDomain);
         }
 

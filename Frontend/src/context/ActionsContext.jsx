@@ -61,7 +61,7 @@ export const ActionsProvider = ({ children }) => {
       let allActions = [];
       
       if (isModeratorOrAdmin) {
-        // Moderator/Admin: Load tất cả pending posts từ API
+        // Moderator/Admin: Load tất cả pending posts từ API (status = 1)
         console.log('[ActionsContext] Loading all pending posts for Moderator/Admin...');
         const pendingRes = await getPendingActionsApi();
         console.log('[ActionsContext] getPendingActionsApi response:', {
@@ -84,7 +84,8 @@ export const ActionsProvider = ({ children }) => {
           allActions = []; // Set empty array nếu failed
         }
         
-        // Cũng load approved và rejected để hiển thị trong tabs
+        // Load approved và rejected để hiển thị trong tabs
+        // Sau đó filter theo AdminId của moderator hiện tại
         console.log('[ActionsContext] Loading approved posts for Moderator/Admin...');
         const approvedRes = await getApprovedActionsApi();
         console.log('[ActionsContext] getApprovedActionsApi response:', {
@@ -203,15 +204,34 @@ export const ActionsProvider = ({ children }) => {
   };
 
   const getPendingActions = () => {
-    return pendingActions.filter(action => action.status === 'pending');
+    // Pending actions: status = 1 (Pending) - hiển thị tất cả
+    return pendingActions.filter(action => action.status === 'pending' || action.statusId === 1);
   };
 
   const getApprovedActions = () => {
-    return pendingActions.filter(action => action.status === 'approved');
+    // Approved actions: status = 2 (Approved) và AdminId = current moderator id
+    const currentUserId = user?.id?.toString() || user?.id;
+    return pendingActions.filter(action => {
+      const isApproved = action.status === 'approved' || action.statusId === 2;
+      if (!isApproved) return false;
+      
+      // Filter theo AdminId - chỉ hiển thị posts mà moderator này đã duyệt
+      const actionAdminId = action.adminId?.toString() || action.adminId || action.AdminId?.toString() || action.AdminId;
+      return actionAdminId && actionAdminId === currentUserId;
+    });
   };
 
   const getRejectedActions = () => {
-    return pendingActions.filter(action => action.status === 'rejected');
+    // Rejected actions: status = 3 (Rejected) và AdminId = current moderator id
+    const currentUserId = user?.id?.toString() || user?.id;
+    return pendingActions.filter(action => {
+      const isRejected = action.status === 'rejected' || action.statusId === 3;
+      if (!isRejected) return false;
+      
+      // Filter theo AdminId - chỉ hiển thị posts mà moderator này đã từ chối
+      const actionAdminId = action.adminId?.toString() || action.adminId || action.AdminId?.toString() || action.AdminId;
+      return actionAdminId && actionAdminId === currentUserId;
+    });
   };
 
   const getUserActions = async (userId) => {

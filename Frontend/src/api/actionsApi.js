@@ -293,14 +293,13 @@ export const getPendingActionsApi = async () => {
           imagePreview: imageUrl,
           status: status,
           statusId: statusId,
+          adminId: post.AdminId || post.adminId || null, // Thêm AdminId để filter theo moderator
           submittedAt: post.SubmittedAt || post.submittedAt,
           approvedRejectedAt: post.ApprovedRejectedAt || post.approvedRejectedAt,
           reviewedAt: post.ApprovedRejectedAt || post.approvedRejectedAt, // Alias cho ActionHistory
           awardedPoints: awardedPoints,
           rewards: rewards, // Thêm rewards để ActionHistory có thể hiển thị
-          approvedRejectedAt: post.ApprovedRejectedAt || post.approvedRejectedAt,
           rejectionReason: post.RejectionReason || post.rejectionReason,
-          awardedPoints: post.AwardedPoints ?? post.awardedPoints ?? 0,
         };
       });
 
@@ -388,6 +387,7 @@ export const getApprovedActionsApi = async () => {
           imagePreview: imageUrl,
           status: 'approved',
           statusId: 2,
+          adminId: post.AdminId || post.adminId || null, // Thêm AdminId để filter theo moderator
           submittedAt: post.SubmittedAt || post.submittedAt,
           approvedRejectedAt: post.ApprovedRejectedAt || post.approvedRejectedAt,
           reviewedAt: post.ApprovedRejectedAt || post.approvedRejectedAt,
@@ -478,6 +478,7 @@ export const getRejectedActionsApi = async () => {
           imagePreview: imageUrl,
           status: 'rejected',
           statusId: 3,
+          adminId: post.AdminId || post.adminId || null, // Thêm AdminId để filter theo moderator
           submittedAt: post.SubmittedAt || post.submittedAt,
           approvedRejectedAt: post.ApprovedRejectedAt || post.approvedRejectedAt,
           reviewedAt: post.ApprovedRejectedAt || post.approvedRejectedAt,

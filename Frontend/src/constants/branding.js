@@ -10,7 +10,7 @@ export const BRAND_NAME = 'EcoToken';
 export const CURRENCY_NAME = 'Eco Tokens';
 
 // Slogans
-export const SLOGAN = 'Hành động xanh - Giá trị thật';
+export const SLOGAN = 'Từ một hành động xanh khơi dậy làn sóng cứu lấy hành tinh';
 export const SLOGAN_LONG = 'Ứng dụng gamification khuyến khích lối sống xanh thông qua hệ thống token và phần thưởng';
 
 // Brand Colors
@@ -31,8 +31,20 @@ export const STREAK_EMOJI = '🔥';
 // Application Info
 export const APP_DESCRIPTION = 'EcoToken - Hành động xanh, Giá trị thật. Ứng dụng gamification khuyến khích lối sống xanh thông qua hệ thống token và phần thưởng.';
 
-// Social Media (to be updated with actual URLs)
+// Social Media Links
 export const SOCIAL_MEDIA = {
-  facebook: '', // To be provided
-  instagram: '' // To be provided
+  facebook: 'https://www.facebook.com/ecotoken',
+  instagram: 'https://www.instagram.com/ecotoken',
+  tiktok: 'https://www.tiktok.com/@ecotoken',
+  email: 'contact@ecotoken.com',
+  website: 'https://www.ecotoken.com'
+};
+
+// Project Information
+export const PROJECT_INFO = {
+  name: 'EcoToken',
+  tagline: 'Từ một hành động xanh khơi dậy làn sóng cứu lấy hành tinh',
+  description: 'Ứng dụng gamification khuyến khích lối sống xanh thông qua hệ thống token và phần thưởng',
+  version: '1.0.0',
+  copyright: `© ${new Date().getFullYear()} EcoToken. All rights reserved.`
 };

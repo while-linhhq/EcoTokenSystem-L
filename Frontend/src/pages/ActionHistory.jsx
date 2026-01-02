@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useActions } from '../context/ActionsContext';
 import { getCurrentUserApi } from '../api/authApi';
 import { formatDate } from '../utils/dateUtils';
+import { Search } from 'lucide-react';
 import './ActionHistory.css';
 
 const ActionHistory = () => {
@@ -11,6 +12,7 @@ const ActionHistory = () => {
   const [activeTab, setActiveTab] = useState('pending'); // Default to 'pending' to show newly submitted actions
   const [error, setError] = useState(null);
   const [allActions, setAllActions] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
 
   // Refresh user data khi vào trang để đồng bộ streak và tokens
   useEffect(() => {
@@ -50,13 +52,25 @@ const ActionHistory = () => {
   const rejectedActions = allActions.filter(action => action && action.status === 'rejected');
   const pendingActions = allActions.filter(action => action && action.status === 'pending');
 
-  const displayedActions = activeTab === 'all' 
+  const displayedActionsBase = activeTab === 'all' 
     ? allActions 
     : activeTab === 'approved' 
     ? approvedActions 
     : activeTab === 'rejected' 
     ? rejectedActions 
     : pendingActions;
+
+  // Filter displayed actions based on search term
+  const displayedActions = useMemo(() => {
+    if (!searchTerm.trim()) return displayedActionsBase;
+    
+    const term = searchTerm.toLowerCase();
+    return displayedActionsBase.filter(action => {
+      const description = (action.description || '').toLowerCase();
+      const comment = (action.comment || '').toLowerCase();
+      return description.includes(term) || comment.includes(term);
+    });
+  }, [displayedActionsBase, searchTerm]);
 
   // Tính tổng tokens từ các actions đã được duyệt
   // Lưu ý: Streak được tính theo ngày liên tiếp (không phải tổng từ các actions)
@@ -107,6 +121,33 @@ const ActionHistory = () => {
         <h1>📸 Lịch sử hành động</h1>
         <p>Xem lại các hành động xanh bạn đã gửi và kết quả duyệt</p>
       </div>
+
+      {/* Search Bar */}
+      <div className="search-bar">
+        <Search size={20} className="search-icon" />
+        <input
+          type="text"
+          placeholder="Tìm kiếm theo nội dung hành động..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="search-input"
+        />
+        {searchTerm && (
+          <button
+            className="clear-search"
+            onClick={() => setSearchTerm('')}
+            title="Xóa tìm kiếm"
+          >
+            ✕
+          </button>
+        )}
+      </div>
+
+      {searchTerm && (
+        <div className="search-results-info">
+          Tìm thấy <strong>{displayedActions.length}</strong> hành động cho "{searchTerm}"
+        </div>
+      )}
 
       {error && (
         <div className="error-message" style={{ margin: '20px', padding: '15px', background: '#fee', color: '#c33', borderRadius: '8px' }}>

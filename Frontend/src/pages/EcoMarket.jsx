@@ -22,8 +22,8 @@ const EcoMarket = () => {
   // Helper function để lấy thông tin tag (giống Admin)
   const getTagInfo = (tag) => {
     const tagMap = {
-      handmade: { emoji: '🎨', name: 'Handmade', color: '#e91e63' },
-      vouchers: { emoji: '🎫', name: 'Voucher', color: '#2196f3' },
+      handmade: { emoji: '🎨', name: 'Thủ công', color: '#e91e63' },
+      vouchers: { emoji: '🎫', name: 'Phiếu khuyến mãi', color: '#2196f3' },
       books: { emoji: '📚', name: 'Sách', color: '#9c27b0' },
       movies: { emoji: '🎬', name: 'Phim', color: '#f44336' },
       donations: { emoji: '❤️', name: 'Quyên góp', color: '#ff5722' }
@@ -126,7 +126,7 @@ const EcoMarket = () => {
   return (
     <div className="market-container">
       <div className="market-header">
-        <h1>🛍️ Eco Market</h1>
+        <h1>🛍️ Cửa hàng</h1>
         <p>Đổi Eco Tokens lấy quà tặng thân thiện môi trường</p>
         {user && (
           <div className="user-tokens">
@@ -165,8 +165,8 @@ const EcoMarket = () => {
               onClick={() => setSelectedCategory(category)}
             >
               {category === 'all' ? 'Tất cả' :
-               category === 'handmade' ? 'Handmade' :
-               category === 'vouchers' ? 'Voucher' :
+               category === 'handmade' ? 'Thủ công' :
+               category === 'vouchers' ? 'Phiếu khuyến mãi' :
                category === 'books' ? 'Sách' :
                category === 'movies' ? 'Phim' :
                'Quyên góp'}
