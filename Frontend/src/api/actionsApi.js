@@ -184,11 +184,13 @@ export const getUserActionsApi = async (userId, statusId = null) => {
           userAvatarImage: userAvatarImage,
           title: post.Title || post.title || '',
           description: post.Content || post.content || '',
+          content: post.Content || post.content || '', // Thêm content field
           image: imageUrl,
           imageUrl: imageUrl,
           imagePreview: imageUrl, // Để tương thích với Moderator page
           status: status, // Đã map đúng từ StatusId
           statusId: statusId || 1, // Default to 1 nếu không có
+          adminId: post.AdminId || post.adminId || null, // Thêm AdminId
           submittedAt: post.SubmittedAt || post.submittedAt,
           approvedRejectedAt: post.ApprovedRejectedAt || post.approvedRejectedAt,
           reviewedAt: post.ApprovedRejectedAt || post.approvedRejectedAt, // Alias cho ActionHistory

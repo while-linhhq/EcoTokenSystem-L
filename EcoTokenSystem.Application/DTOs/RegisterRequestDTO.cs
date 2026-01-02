@@ -13,5 +13,8 @@ namespace EcoTokenSystem.Application.DTOs
 
         [Compare(nameof(Password))]
         public string PasswordConfirm { get; set; }
+
+        // Optional name/nickname for admin creating users
+        public string? Name { get; set; }
     }
 }

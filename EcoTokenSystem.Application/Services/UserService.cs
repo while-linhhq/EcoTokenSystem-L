@@ -189,13 +189,16 @@ namespace EcoTokenSystem.Application.Services
                     Data = new ResponseUserProfileDTO()
                 };
             }
-            if (request.DateOfBirth.HasValue)
+            // Update only provided fields (allow partial updates)
+            if (!string.IsNullOrEmpty(request.Name))
             {
-                userDomain.DateOfBirth = request.DateOfBirth.Value.ToDateTime(TimeOnly.MinValue);
+                userDomain.Name = request.Name;
             }
 
-            userDomain.Name = request.Name;
-            userDomain.Email = request.Email ?? string.Empty;
+            if (!string.IsNullOrEmpty(request.Email))
+            {
+                userDomain.Email = request.Email;
+            }
 
             // Handle avatar update
             if (request.Avatar != null && request.Avatar.Length > 0)
@@ -217,9 +220,25 @@ namespace EcoTokenSystem.Application.Services
             }
             // If both Avatar and AvatarEmoji are null/empty, keep existing avatar (no change)
 
-            userDomain.PhoneNumber = request.PhoneNumber;
-            userDomain.Address = request.Address;
-            userDomain.Gender = request.Gender;
+            if (request.DateOfBirth.HasValue)
+            {
+                userDomain.DateOfBirth = request.DateOfBirth.Value.ToDateTime(TimeOnly.MinValue);
+            }
+
+            if (!string.IsNullOrEmpty(request.PhoneNumber))
+            {
+                userDomain.PhoneNumber = request.PhoneNumber;
+            }
+
+            if (!string.IsNullOrEmpty(request.Address))
+            {
+                userDomain.Address = request.Address;
+            }
+
+            if (!string.IsNullOrEmpty(request.Gender))
+            {
+                userDomain.Gender = request.Gender;
+            }
 
              dbContext.Update(userDomain);
             await dbContext.SaveChangesAsync();
@@ -472,7 +491,8 @@ namespace EcoTokenSystem.Application.Services
                     Username = request.Username,
                     PasswordHash = passwordHash,
                     RoleId = roleId,
-                    CreatedAt = DateTime.UtcNow
+                    CreatedAt = DateTime.UtcNow,
+                    Name = !string.IsNullOrWhiteSpace(request.Name) ? request.Name : null // Set Name if provided
                 };
 
                 await dbContext.Users.AddAsync(userDomain);
