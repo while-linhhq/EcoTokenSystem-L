@@ -616,13 +616,15 @@ const Admin = () => {
           className={activeTab === 'moderators' ? 'active' : ''}
           onClick={() => setActiveTab('moderators')}
         >
-          👮 Tạo Moderator
+          <UserPlus size={18} style={{ marginRight: '8px' }} />
+          Tạo người kiểm duyệt / người dùng
         </button>
         <button
           className={activeTab === 'items' ? 'active' : ''}
           onClick={() => setActiveTab('items')}
         >
-          🎁 Quản lý Items
+          <Package size={18} style={{ marginRight: '8px' }} />
+          Quản lý quà đổi
         </button>
         <button
           className={activeTab === 'rewards' ? 'active' : ''}
@@ -634,7 +636,8 @@ const Admin = () => {
           className={activeTab === 'users' ? 'active' : ''}
           onClick={() => setActiveTab('users')}
         >
-          👥 Quản lý User
+          <Users size={18} style={{ marginRight: '8px' }} />
+          Quản lý người dùng
         </button>
         <button
           className={activeTab === 'exchanges' ? 'active' : ''}

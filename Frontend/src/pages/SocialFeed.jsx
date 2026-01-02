@@ -289,6 +289,32 @@ const SocialFeed = () => {
       {/* Posts Tab Content */}
       {activeTab === 'posts' && (
         <div className="feed-section">
+          {/* Stories Section - Hiển thị ở đầu feed giống Facebook/Instagram */}
+          {(stories.length > 0 || isAuthenticated) && (
+            <div className="stories-section-feed">
+              <div className="stories-list-feed">
+                {stories.map((userStories, index) => (
+                  <StoryCircle
+                    key={index}
+                    userStories={userStories}
+                    currentUserId={user?.id}
+                    onClick={handleStoryClick}
+                  />
+                ))}
+                {isAuthenticated && (
+                  <div className="story-circle-container story-add-new" onClick={() => setShowStoryUpload(true)}>
+                    <div className="story-circle viewed">
+                      <div className="story-circle-inner story-add-inner">
+                        <Plus size={24} />
+                      </div>
+                    </div>
+                    <div className="story-username">Tạo Story</div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+          
           {loading ? (
             <div className="loading-state">
               <p>Đang tải bài đăng...</p>
