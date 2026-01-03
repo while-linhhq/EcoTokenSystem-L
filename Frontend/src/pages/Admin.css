@@ -532,6 +532,7 @@
 .cancel-btn:hover {
   background: #bbb;
   transform: translateY(-2px);
+
 }
 
 /* Modal Styles */
@@ -1352,4 +1353,5 @@
     height: 180px;
   }
 }
+
 

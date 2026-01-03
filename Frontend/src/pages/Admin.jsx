@@ -52,6 +52,7 @@ const Admin = () => {
   const [showDeleteStreakModal, setShowDeleteStreakModal] = useState(false);
   const [streakToDelete, setStreakToDelete] = useState(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [isEditingStreak, setIsEditingStreak] = useState(false);
   const [streakForm, setStreakForm] = useState({
     streak: '',
     color: '#FFD700',
@@ -415,11 +416,13 @@ const Admin = () => {
 
   // Streak Milestone Handlers
   const handleOpenAddStreakModal = () => {
+    setIsEditingStreak(false);
     setStreakForm({ streak: '', color: '#FFD700', emoji: '🌟', name: '' });
     setShowStreakModal(true);
   };
 
   const handleOpenEditStreakModal = (streakValue, milestone) => {
+    setIsEditingStreak(true);
     setStreakForm({
       streak: streakValue.toString(),
       color: milestone.color || '#FFD700',
@@ -432,6 +435,7 @@ const Admin = () => {
   const handleCloseStreakModal = () => {
     setShowStreakModal(false);
     setShowEmojiPicker(false);
+    setIsEditingStreak(false);
     setStreakForm({ streak: '', color: '#FFD700', emoji: '🌟', name: '' });
   };
 
@@ -441,17 +445,28 @@ const Admin = () => {
       alert('Vui lòng điền đầy đủ thông tin (số ngày, tên linh vật, và chọn emoji)');
       return;
     }
+
+    const streakValue = parseInt(streakForm.streak);
+    if (isNaN(streakValue) || streakValue < 1) {
+      alert('Số ngày streak phải là số nguyên dương');
+      return;
+    }
+
     try {
-      const result = await updateStreakMilestone(parseInt(streakForm.streak), {
+      const result = await updateStreakMilestone(streakValue.toString(), {
         color: streakForm.color,
         emoji: streakForm.emoji,
         name: streakForm.name
       });
       if (result.success) {
-        alert(result.message || `Đã cập nhật milestone streak ${streakForm.streak}`);
+        alert(result.message || (isEditingStreak
+          ? `Đã cập nhật milestone streak ${streakForm.streak}`
+          : `Đã thêm milestone streak ${streakForm.streak}`));
         handleCloseStreakModal();
       } else {
-        alert(result.message || 'Có lỗi xảy ra khi cập nhật milestone');
+        alert(result.message || (isEditingStreak
+          ? 'Có lỗi xảy ra khi cập nhật milestone'
+          : 'Có lỗi xảy ra khi thêm milestone'));
       }
     } catch (error) {
       console.error('[Admin] Error submitting streak:', error);
@@ -1569,7 +1584,7 @@ const Admin = () => {
         <div className="modal-overlay" onClick={handleCloseStreakModal}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>Thêm/Chỉnh sửa Streak Milestone</h3>
+              <h3>{isEditingStreak ? 'Chỉnh sửa Streak Milestone' : 'Thêm Streak Milestone mới'}</h3>
               <button className="modal-close" onClick={handleCloseStreakModal}>×</button>
             </div>
             <form onSubmit={handleSubmitStreak} className="modal-form">
@@ -1582,7 +1597,14 @@ const Admin = () => {
                   placeholder="Ví dụ: 50, 100"
                   min="1"
                   required
+                  disabled={isEditingStreak}
+                  style={isEditingStreak ? { background: '#f5f5f5', cursor: 'not-allowed' } : {}}
                 />
+                {isEditingStreak && (
+                  <small style={{ color: '#666', fontSize: '0.85em', marginTop: '5px', display: 'block' }}>
+                    Không thể thay đổi số ngày streak khi chỉnh sửa
+                  </small>
+                )}
               </div>
               <div className="form-group">
                 <label>Màu sắc linh vật *</label>
@@ -1747,7 +1769,7 @@ const Admin = () => {
               </div>
               <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
                 <button type="submit" className="submit-btn" style={{ flex: 1 }}>
-                  Cập nhật
+                  {isEditingStreak ? 'Cập nhật' : 'Thêm mới'}
                 </button>
                 <button
                   type="button"
