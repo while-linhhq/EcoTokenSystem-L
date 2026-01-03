@@ -178,6 +178,12 @@ namespace EcoTokenSystem.Application.Services
 
                 postDomain.AwardedPoints = request.AwardedPoints;
 
+                // ✅ SỬA LỖI STREAK: Lưu post vào DB TRƯỚC KHI tính streak
+                // Để query trong UpdateUserStreakAsync có thể thấy post mới được approve
+                _context.Posts.Update(postDomain);
+                await _context.SaveChangesAsync();
+                _logger.LogInformation($"[ApproveRejectPostAsync] Saved post {postId} with ApprovedRejectedAt before calculating streak");
+
                 // A. CẬP NHẬT ĐIỂM
                 var oldPoints = authorDomain.CurrentPoints;
                 authorDomain.CurrentPoints += request.AwardedPoints;
@@ -197,17 +203,19 @@ namespace EcoTokenSystem.Application.Services
                 await _context.PointHistories.AddAsync(pointHistory);
                 _logger.LogInformation($"[ApproveRejectPostAsync] Added PointHistory: {pointHistory.Id}, PointsChange: {pointHistory.PointsChange}");
 
-                // C. XỬ LÝ LOGIC STREAK
-                await UpdateUserStreakAsync(authorDomain); // Bỏ qua SubmittedAt, dùng ApprovedAt/UtcNow
+                // C. XỬ LÝ LOGIC STREAK (sau khi post đã được lưu vào DB)
+                await UpdateUserStreakAsync(authorDomain); // Bây giờ query sẽ bao gồm post mới được approve
+
+                // LƯU CÁC THAY ĐỔI CÒN LẠI: points, pointHistory, streak
+                await _context.SaveChangesAsync();
+                _logger.LogInformation($"[ApproveRejectPostAsync] Saved user points, pointHistory, and streak updates");
             }
             else if (request.StatusId == 3) // REJECT (3)
             {
                 postDomain.RejectionReason = request.RejectReason;
+                _context.Posts.Update(postDomain);
+                await _context.SaveChangesAsync();
             }
-
-            // LƯU TRANSACTION DUY NHẤT
-            _context.Posts.Update(postDomain);
-            await _context.SaveChangesAsync();
 
             return new ResponseDTO()
             {
